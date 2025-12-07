@@ -204,9 +204,9 @@ body {
 }
 
 .controls-wrapper {
-  flex: 1;
+  flex: 0 0 auto;
   position: relative;
-  min-width: 180px;
+  min-width: 140px;
 }
 
 .resolution-select {

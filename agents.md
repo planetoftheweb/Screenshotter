@@ -40,3 +40,4 @@ The most complex part of the application is the scrolling logic in `server/index
 ## Development Scripts
 - `npm run dev`: Uses `concurrently` to launch both the Vite dev server and the Express API.
 
+

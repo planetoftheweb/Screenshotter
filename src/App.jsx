@@ -8,7 +8,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [resolution, setResolution] = useState({ width: 1920, height: 1080, fullPage: false, label: 'HD (1920 x 1080)' });
+  const [resolution, setResolution] = useState({ width: 1920, height: 1080, fullPage: false, label: 'HD • 1920×1080' });
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
@@ -26,9 +26,9 @@ function App() {
   };
 
   const resolutions = [
-    { width: 1920, height: 1080, fullPage: false, label: 'HD (1920 x 1080)' },
-    { width: 1080, height: 1920, fullPage: false, label: 'Vertical / Story (1080 x 1920)' },
-    { width: 1920, height: 1080, fullPage: true, label: 'Full Page (1920 width)' },
+    { width: 1920, height: 1080, fullPage: false, label: 'HD • 1920×1080' },
+    { width: 1080, height: 1920, fullPage: false, label: 'Vertical • 1080×1920' },
+    { width: 1920, height: 1080, fullPage: true, label: 'Full Page' },
   ];
 
   const captureScreenshot = async (e) => {
@@ -251,7 +251,7 @@ function App() {
                   </div>
                   <div className="history-info">
                     <span className="history-time">{item.timestamp}</span>
-                    <span className="history-res">{item.resolution.label.split('(')[0].trim()}</span>
+                    <span className="history-res">{item.resolution.label.split('•')[0].trim()}</span>
                   </div>
                   <button 
                     onClick={() => downloadScreenshot(item.screenshot, item.pageInfo)} 
