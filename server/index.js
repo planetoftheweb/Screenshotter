@@ -1,12 +1,20 @@
 import express from 'express';
 import cors from 'cors';
 import puppeteer from 'puppeteer';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Serve static files from docs/ in production
+app.use(express.static(path.join(__dirname, '..', 'docs')));
 
 app.post('/api/screenshot', async (req, res) => {
   const { url, width = 1920, height = 1080, fullPage = false } = req.body;
@@ -406,6 +414,11 @@ app.post('/api/screenshot', async (req, res) => {
       error: error.message || 'Failed to capture screenshot',
     });
   }
+});
+
+// Catch-all: serve index.html for client-side routing
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'docs', 'index.html'));
 });
 
 app.listen(PORT, () => {

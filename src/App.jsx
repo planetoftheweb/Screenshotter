@@ -224,7 +224,7 @@ function App() {
           targetUrl = 'https://' + targetUrl;
         }
 
-        const response = await fetch('http://localhost:3001/api/screenshot', {
+        const response = await fetch('/api/screenshot', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ 
