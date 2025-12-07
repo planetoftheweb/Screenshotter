@@ -1,0 +1,77 @@
+# Changelog
+
+All notable changes to Screenshotter will be documented in this file.
+
+## [1.0.0] - 2025-12-07
+
+### 🎉 Initial Release
+
+#### Features
+- **Screenshot Capture**
+  - Multiple preset resolutions (HD, Vertical, Full Page)
+  - Custom user-defined resolutions with persistence
+  - Batch URL processing (up to 5 URLs per request)
+  - Full page screenshot support
+
+- **Smart Scrolling**
+  - URL hashtag navigation (e.g., `#section-name`)
+  - Automatic element detection for broken anchors
+  - Text-based search fallback for missing IDs
+  - SPA-compatible navigation
+
+- **Popup Removal**
+  - Request interception for cookie/consent scripts
+  - Pre-set consent cookies for major providers
+  - DOM cleanup for fixed/sticky overlays
+  - Support for Iubenda, OneTrust, CookieBot, and more
+
+- **Post-Capture Tools**
+  - Client-side cropping with react-image-crop
+  - Download as PNG
+  - Copy to clipboard
+  - Batch download as ZIP (jszip)
+  - URL retention for reference
+
+- **User Interface**
+  - Light/dark mode toggle
+  - Instant CSS tooltips (no delay)
+  - Icon-only button design
+  - Responsive layout
+  - Help overlay tutorial
+
+- **Persistence**
+  - Screenshot history (10 items) in localStorage
+  - Custom resolutions in localStorage
+  - Theme preference in localStorage
+  - Recent URLs in localStorage
+
+- **Rate Limiting**
+  - 5 requests per minute per IP
+  - 30 requests per hour per IP
+  - Max 5 URLs per batch
+  - Max 4K resolution (3840×2160)
+
+- **Deployment**
+  - Render deployment configuration
+  - @sparticuz/chromium for cloud Puppeteer
+  - Express 5 compatibility
+
+### Tech Stack
+- React 19.2
+- Vite 7.2
+- Express 5.2
+- Puppeteer 24.32
+- @sparticuz/chromium 143.0
+
+---
+
+## Future Roadmap
+
+- [ ] User authentication (API keys)
+- [ ] PostgreSQL for user data persistence
+- [ ] Redis for distributed rate limiting
+- [ ] Scheduled screenshots
+- [ ] Webhook notifications
+- [ ] PDF export option
+- [ ] Screenshot comparison/diff
+
