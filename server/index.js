@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import puppeteerCore from 'puppeteer-core';
 import puppeteer from 'puppeteer';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -9,6 +10,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+const isProduction = process.env.NODE_ENV === 'production';
 
 app.use(cors());
 app.use(express.json());
@@ -28,10 +30,21 @@ app.post('/api/screenshot', async (req, res) => {
     // Validate URL
     new URL(url);
 
-    browser = await puppeteer.launch({
-      headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
+    // Use @sparticuz/chromium in production, regular puppeteer in development
+    if (isProduction) {
+      const chromium = await import('@sparticuz/chromium');
+      browser = await puppeteerCore.launch({
+        args: chromium.default.args,
+        defaultViewport: chromium.default.defaultViewport,
+        executablePath: await chromium.default.executablePath(),
+        headless: chromium.default.headless,
+      });
+    } else {
+      browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      });
+    }
 
     const page = await browser.newPage();
 
