@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import puppeteerCore from 'puppeteer-core';
 import puppeteer from 'puppeteer';
 import path from 'path';
@@ -25,6 +25,15 @@ const LIMITS = {
   REQUEST_TIMEOUT_MS: 30000,       // 30 seconds
 };
 
+// Helper: Get client key with IPv6 subnet masking and fallbacks
+const getClientKey = (req) => {
+  const ip = req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim();
+  if (ip) {
+    return ipKeyGenerator(ip); // Handles IPv6 subnet masking
+  }
+  return 'unknown'; // Fallback if no IP available
+};
+
 // Rate limiter: 5 requests per minute per IP
 const minuteRateLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
@@ -35,6 +44,7 @@ const minuteRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: getClientKey,
 });
 
 // Rate limiter: 30 requests per hour per IP
@@ -47,6 +57,7 @@ const hourlyRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: getClientKey,
 });
 
 app.use(cors());
@@ -500,4 +511,3 @@ app.get('/{*splat}', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Screenshot server running on http://localhost:${PORT}`);
 });
-
