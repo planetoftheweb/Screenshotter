@@ -85,6 +85,18 @@ All primary action buttons follow a consistent "icon-only" design language:
 - `npm run dev`: Uses `concurrently` to launch both the Vite dev server and the Express API.
 - `npm run build`: Builds the frontend to the `docs/` folder for GitHub Pages deployment.
 
+## Deployment Workflow
+**IMPORTANT**: When the user asks to commit and push, always run the build first:
+
+```bash
+npm run build
+git add -A
+git commit -m "your commit message"
+git push
+```
+
+The `docs/` folder contains the production build for GitHub Pages. Failing to run `npm run build` before pushing will result in a blank page on the live site.
+
 ## File Structure
 ```
 ├── src/
