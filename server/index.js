@@ -416,8 +416,8 @@ app.post('/api/screenshot', async (req, res) => {
   }
 });
 
-// Catch-all: serve index.html for client-side routing
-app.get('*', (req, res) => {
+// Catch-all: serve index.html for client-side routing (Express 5 syntax)
+app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'docs', 'index.html'));
 });
 
