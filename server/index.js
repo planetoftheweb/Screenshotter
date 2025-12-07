@@ -35,7 +35,6 @@ const minuteRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
 });
 
 // Rate limiter: 30 requests per hour per IP
@@ -48,7 +47,6 @@ const hourlyRateLimiter = rateLimit({
   },
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
 });
 
 app.use(cors());
