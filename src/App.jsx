@@ -200,17 +200,25 @@ function App() {
     localStorage.setItem('recentUrls', JSON.stringify(recentUrls));
   }, [recentUrls]);
 
+  const MAX_URLS_PER_BATCH = 5;
+
   const captureScreenshot = async (e) => {
     e.preventDefault();
     if (!url.trim()) return;
 
     // Split input by newlines or commas
-    const targets = url.split(/[\n,]+/).map(u => u.trim()).filter(u => u);
+    let targets = url.split(/[\n,]+/).map(u => u.trim()).filter(u => u);
     
     if (targets.length === 0) return;
 
+    // Limit batch size
+    if (targets.length > MAX_URLS_PER_BATCH) {
+      setError(`Maximum ${MAX_URLS_PER_BATCH} URLs per batch. Processing first ${MAX_URLS_PER_BATCH} only.`);
+      targets = targets.slice(0, MAX_URLS_PER_BATCH);
+    }
+
     setLoading(true);
-    setError(null);
+    if (targets.length <= MAX_URLS_PER_BATCH) setError(null);
     setScreenshot(null);
     setPageInfo(null);
 
@@ -238,6 +246,13 @@ function App() {
         const data = await response.json();
 
         if (!response.ok) {
+          // Handle rate limiting specifically
+          if (response.status === 429) {
+            const retryAfter = data.retryAfter || 60;
+            setError(`Rate limit reached. Please wait ${retryAfter < 60 ? retryAfter + ' seconds' : Math.ceil(retryAfter / 60) + ' minute(s)'} before trying again.`);
+            setLoading(false);
+            return; // Stop processing on rate limit
+          }
           console.error(`Failed to capture ${targetUrl}:`, data.error);
           continue; // Skip to next URL
         }
@@ -899,6 +914,7 @@ function App() {
 
         <footer className="footer">
           <p>Professional screenshots optimized for web articles and social media</p>
+          <p className="rate-limit-info">Rate limit: 5 screenshots/min • 30/hour • Max 5 URLs per batch</p>
         </footer>
       </main>
     </div>

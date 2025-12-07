@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import rateLimit from 'express-rate-limit';
 import puppeteerCore from 'puppeteer-core';
 import puppeteer from 'puppeteer';
 import path from 'path';
@@ -12,14 +13,78 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 
+// ===================
+// RATE LIMITING CONFIG
+// ===================
+const LIMITS = {
+  MAX_REQUESTS_PER_MINUTE: 5,      // Per IP
+  MAX_REQUESTS_PER_HOUR: 30,       // Per IP
+  MAX_URLS_PER_BATCH: 5,           // Per request
+  MAX_WIDTH: 3840,                 // 4K max
+  MAX_HEIGHT: 2160,                // 4K max
+  REQUEST_TIMEOUT_MS: 30000,       // 30 seconds
+};
+
+// Rate limiter: 5 requests per minute per IP
+const minuteRateLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: LIMITS.MAX_REQUESTS_PER_MINUTE,
+  message: { 
+    error: `Too many requests. Limit: ${LIMITS.MAX_REQUESTS_PER_MINUTE} screenshots per minute.`,
+    retryAfter: 60
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
+});
+
+// Rate limiter: 30 requests per hour per IP
+const hourlyRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: LIMITS.MAX_REQUESTS_PER_HOUR,
+  message: { 
+    error: `Hourly limit reached. Limit: ${LIMITS.MAX_REQUESTS_PER_HOUR} screenshots per hour.`,
+    retryAfter: 3600
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip || req.headers['x-forwarded-for'] || 'unknown',
+});
+
 app.use(cors());
 app.use(express.json());
+
+// Trust proxy for accurate IP detection on Render
+app.set('trust proxy', 1);
 
 // Serve static files from docs/ in production
 app.use(express.static(path.join(__dirname, '..', 'docs')));
 
-app.post('/api/screenshot', async (req, res) => {
+// API endpoint to check rate limit status
+app.get('/api/limits', (req, res) => {
+  res.json({
+    limits: {
+      requestsPerMinute: LIMITS.MAX_REQUESTS_PER_MINUTE,
+      requestsPerHour: LIMITS.MAX_REQUESTS_PER_HOUR,
+      maxUrlsPerBatch: LIMITS.MAX_URLS_PER_BATCH,
+      maxResolution: `${LIMITS.MAX_WIDTH}x${LIMITS.MAX_HEIGHT}`,
+    }
+  });
+});
+
+// Apply rate limiters to screenshot endpoint
+app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, res) => {
   const { url, width = 1920, height = 1080, fullPage = false } = req.body;
+
+  // Validate resolution limits
+  const requestedWidth = parseInt(width);
+  const requestedHeight = parseInt(height);
+  
+  if (requestedWidth > LIMITS.MAX_WIDTH || requestedHeight > LIMITS.MAX_HEIGHT) {
+    return res.status(400).json({ 
+      error: `Resolution exceeds maximum allowed (${LIMITS.MAX_WIDTH}x${LIMITS.MAX_HEIGHT})` 
+    });
+  }
 
   if (!url) {
     return res.status(400).json({ error: 'URL is required' });

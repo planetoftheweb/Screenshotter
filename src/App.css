@@ -1231,6 +1231,12 @@ body {
   font-size: 0.9rem;
 }
 
+.footer .rate-limit-info {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  margin-top: 0.5rem;
+}
+
 .custom-res-modal {
   max-width: 450px;
 }

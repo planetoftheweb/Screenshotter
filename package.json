@@ -16,6 +16,7 @@
     "@sparticuz/chromium": "^143.0.0",
     "cors": "^2.8.5",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.2.1",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
     "puppeteer": "^24.32.0",
