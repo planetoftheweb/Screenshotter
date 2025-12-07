@@ -63,14 +63,21 @@ npm run dev
 - `src/`: React frontend application
 - `server/`: Express backend with Puppeteer logic
 - `server/index.js`: Core screenshot and scrolling logic
-- `docs/`: Production build output (for GitHub Pages)
+- `render.yaml`: Render deployment configuration
 
 ## Deployment
 
-Build for production:
+This app is deployed on [Render](https://render.com). The `render.yaml` file contains the deployment configuration.
 
-```bash
-npm run build
-```
+To deploy your own instance:
+1. Fork this repository
+2. Create a new Web Service on Render
+3. Connect your GitHub repo — Render will auto-detect `render.yaml`
 
-The output is generated in the `docs/` folder, ready for GitHub Pages hosting.
+### Rate Limits
+
+To prevent abuse, the API has rate limiting:
+- **5 requests per minute** per IP
+- **30 requests per hour** per IP
+- **Max 5 URLs** per batch request
+- **Max resolution**: 3840×2160 (4K)

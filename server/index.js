@@ -57,8 +57,8 @@ app.use(express.json());
 // Trust proxy for accurate IP detection on Render
 app.set('trust proxy', 1);
 
-// Serve static files from docs/ in production
-app.use(express.static(path.join(__dirname, '..', 'docs')));
+// Serve static files from dist/ in production
+app.use(express.static(path.join(__dirname, '..', 'dist')));
 
 // API endpoint to check rate limit status
 app.get('/api/limits', (req, res) => {
@@ -496,7 +496,7 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
 
 // Catch-all: serve index.html for client-side routing (Express 5 syntax)
 app.get('/{*splat}', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'docs', 'index.html'));
+  res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
 app.listen(PORT, () => {

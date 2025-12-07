@@ -83,19 +83,22 @@ All primary action buttons follow a consistent "icon-only" design language:
 
 ## Development Scripts
 - `npm run dev`: Uses `concurrently` to launch both the Vite dev server and the Express API.
-- `npm run build`: Builds the frontend to the `docs/` folder for GitHub Pages deployment.
+- `npm run build`: Builds the frontend to the `dist/` folder.
 
-## Deployment Workflow
-**IMPORTANT**: When the user asks to commit and push, always run the build first:
+## Deployment
+The app is deployed on **Render**. Auto-deploy is enabled from the `main` branch.
 
-```bash
-npm run build
-git add -A
-git commit -m "your commit message"
-git push
-```
+- `render.yaml` contains the deployment configuration
+- Render runs `npm install && npm run build` during build
+- Render runs `npm start` to start the server
+- The Express server serves the static frontend from `dist/`
 
-The `docs/` folder contains the production build for GitHub Pages. Failing to run `npm run build` before pushing will result in a blank page on the live site.
+## Rate Limiting
+The API has rate limiting to prevent abuse:
+- 5 requests per minute per IP
+- 30 requests per hour per IP
+- Max 5 URLs per batch request
+- Max resolution: 3840×2160
 
 ## File Structure
 ```
@@ -105,7 +108,7 @@ The `docs/` folder contains the production build for GitHub Pages. Failing to ru
 │   └── main.jsx      # React entry point
 ├── server/
 │   └── index.js      # Express server + Puppeteer logic
-├── docs/             # Production build output
+├── render.yaml       # Render deployment config
 ├── agents.md         # This file
 └── README.md         # User-facing documentation
 ```
