@@ -15,9 +15,11 @@
     "cors": "^2.8.5",
     "express": "^5.2.1",
     "file-saver": "^2.0.5",
+    "jszip": "^3.10.1",
     "puppeteer": "^24.32.0",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "react-image-crop": "^11.0.10"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

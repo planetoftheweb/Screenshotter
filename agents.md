@@ -12,6 +12,7 @@ Screenshotter is a full-stack application designed to capture precise, high-qual
 - **Framework**: React + Vite.
 - **Key Component**: `App.jsx` handles the UI, state management, and API calls.
 - **Filename Logic**: The frontend is responsible for generating the download filename. It cleans the page title and hash (if present) to create a user-friendly string (e.g., converting spaces to dashes, removing special characters).
+- **State Persistence**: Uses `localStorage` for theme preference, recent URLs, screenshot history (up to 10 items), and custom resolutions.
 
 ### Backend (`server/`)
 - **Framework**: Express.js.
@@ -32,12 +33,67 @@ The most complex part of the application is the scrolling logic in `server/index
     - Text nodes containing the keywords.
     - This fuzzy matching allows it to find sections even when the ID doesn't exactly match the hash.
 
+### Popup Removal (`server/index.js`)
+The backend implements aggressive popup blocking:
+
+1.  **Request Interception**: Blocks requests to known cookie consent and popup script domains (Iubenda, OneTrust, CookieBot, OptinMonster, etc.).
+2.  **Cookie Pre-setting**: Sets consent cookies for common providers before page load.
+3.  **DOM Cleanup**: Removes fixed/sticky elements, modals, and elements with `role="alertdialog"`.
+4.  **Heuristic Removal**: Identifies and removes any fixed/sticky elements covering significant screen area.
+
 ### Image Processing
-- **Viewport**: Fixed at 1920x1080.
+- **Viewport**: Configurable (default 1920×1080), supports custom dimensions.
 - **Format**: PNG (Base64 encoded for transfer).
 - **Timing**: Includes explicit waits to ensure animations and lazy-loaded content settle before capture.
 
+## UI/UX Standards
+
+### Button Design
+All primary action buttons follow a consistent "icon-only" design language:
+
+- **Shape**: Rounded square (`border-radius: 14px`).
+- **Size**: 54px × 54px for primary actions.
+- **Content**: Simple SVG icon centered in the button. No text labels.
+- **Tooltips**: Use `data-tooltip` attribute for instant CSS-based tooltips (no delay). Tooltips appear above buttons by default.
+- **Theme**:
+  - Primary actions (e.g., Capture, Download): Filled accent color (`var(--accent)`).
+  - Secondary actions (e.g., Copy, Cancel, Navigation): Card background (`var(--bg-card)`) with subtle border.
+
+### Tooltip Guidelines
+- Use `data-tooltip` attribute instead of native `title` for instant hover response.
+- Tooltips should be concise (2-4 words typically).
+- Ensure parent containers have `overflow: visible` to prevent tooltip clipping.
+- Use `z-index` management on hover states to ensure tooltips appear above sibling elements.
+
+### Screenshot Overlay
+- Action buttons for the main screenshot appear in a floating overlay at the bottom of the screenshot container.
+- Use `position: absolute` (not `fixed`) relative to the screenshot container to stay within bounds on long screenshots.
+- Overlay is visible on hover over the screenshot preview area.
+
+### History Items
+- Each history item displays: thumbnail, timestamp, resolution label, and action buttons.
+- URL is accessible via tooltip on the copy/link button (not displayed as text).
+- Items use `z-index` on hover to ensure tooltips appear above adjacent cards.
+
+## Custom Resolutions
+- Users can add custom resolutions via a modal accessible from the size dropdown.
+- Custom sizes are persisted in `localStorage` under `screenshotter-custom-resolutions`.
+- Default values (1920×1080) are used if width/height inputs are left empty.
+- Custom sizes appear in a separate section of the dropdown with edit/delete capabilities.
+
 ## Development Scripts
 - `npm run dev`: Uses `concurrently` to launch both the Vite dev server and the Express API.
+- `npm run build`: Builds the frontend to the `docs/` folder for GitHub Pages deployment.
 
-
+## File Structure
+```
+├── src/
+│   ├── App.jsx       # Main React component
+│   ├── App.css       # All styling (CSS variables for theming)
+│   └── main.jsx      # React entry point
+├── server/
+│   └── index.js      # Express server + Puppeteer logic
+├── docs/             # Production build output
+├── agents.md         # This file
+└── README.md         # User-facing documentation
+```
