@@ -2,6 +2,15 @@
 
 All notable changes to Screenshotter will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Screenshot Color Scheme Control**: New toggle button to capture screenshots in light mode, dark mode, or system default
+  - Three modes: System (default), Light, Dark
+  - Mode preference persists in localStorage
+  - Uses Puppeteer's `emulateMediaFeatures` to set `prefers-color-scheme`
+  - Independent from UI theme preference
+
 ## [1.0.0] - 2025-12-07
 
 ### 🎉 Initial Release
