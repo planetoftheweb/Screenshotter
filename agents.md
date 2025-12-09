@@ -63,6 +63,11 @@ const LIMITS = {
 };
 ```
 
+**IPv6 Handling**: Uses `ipKeyGenerator` from express-rate-limit for proper IPv6 subnet masking. The `getClientKey` function combines:
+- IPv6 subnet masking via `ipKeyGenerator`
+- Fallback chain: `req.ip` → `x-forwarded-for` → `'unknown'`
+- Prevents ERR_ERL_KEY_GEN_IPV6 security warnings
+
 ## UI/UX Standards
 
 ### Button Design
