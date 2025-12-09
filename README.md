@@ -156,7 +156,7 @@ To prevent abuse, the API has built-in rate limiting with proper IPv6 support:
 
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) file for details
 
 ## Author
 
