@@ -468,11 +468,12 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       }
     }
 
-    // Apply zoom level to the page
-    const zoomLevel = parseInt(zoom) || 130;
+    // Apply zoom level to the page using CSS transform for better compatibility
     const zoomFactor = zoomLevel / 100;
     await page.evaluate((factor) => {
-      document.body.style.zoom = factor;
+      document.body.style.transform = `scale(${factor})`;
+      document.body.style.transformOrigin = '0 0';
+      document.body.style.width = `${100 / factor}%`;
     }, zoomFactor);
 
     // Wait a bit for zoom to be applied
