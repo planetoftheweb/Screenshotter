@@ -13,6 +13,10 @@ function App() {
   const [copied, setCopied] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
   const [resolution, setResolution] = useState({ width: 1920, height: 1080, fullPage: false, label: 'HD • 1920×1080' });
+  const [zoom, setZoom] = useState(() => {
+    const savedZoom = localStorage.getItem('zoom');
+    return savedZoom ? parseInt(savedZoom) : 130;
+  });
   const [theme, setTheme] = useState(() => {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
@@ -79,6 +83,10 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('zoom', zoom.toString());
+  }, [zoom]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -239,7 +247,8 @@ function App() {
             url: targetUrl,
             width: resolution.width,
             height: resolution.height,
-            fullPage: resolution.fullPage
+            fullPage: resolution.fullPage,
+            zoom: zoom
           }),
         });
 
@@ -672,6 +681,29 @@ function App() {
               className="url-input"
               disabled={loading}
               rows={1}
+            />
+          </div>
+          
+          <div className="zoom-control">
+            <label htmlFor="zoom-slider" className="zoom-label">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <line x1="11" y1="8" x2="11" y2="14"></line>
+                <line x1="8" y1="11" x2="14" y2="11"></line>
+              </svg>
+              Zoom: {zoom}%
+            </label>
+            <input
+              id="zoom-slider"
+              type="range"
+              min="25"
+              max="300"
+              step="5"
+              value={zoom}
+              onChange={(e) => setZoom(parseInt(e.target.value))}
+              className="zoom-slider"
+              disabled={loading}
             />
           </div>
           

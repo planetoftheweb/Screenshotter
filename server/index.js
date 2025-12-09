@@ -83,7 +83,7 @@ app.get('/api/limits', (req, res) => {
 
 // Apply rate limiters to screenshot endpoint
 app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, res) => {
-  const { url, width = 1920, height = 1080, fullPage = false } = req.body;
+  const { url, width = 1920, height = 1080, fullPage = false, zoom = 130 } = req.body;
 
   // Validate resolution limits
   const requestedWidth = parseInt(width);
@@ -92,6 +92,14 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
   if (requestedWidth > LIMITS.MAX_WIDTH || requestedHeight > LIMITS.MAX_HEIGHT) {
     return res.status(400).json({ 
       error: `Resolution exceeds maximum allowed (${LIMITS.MAX_WIDTH}x${LIMITS.MAX_HEIGHT})` 
+    });
+  }
+
+  // Validate zoom level (25% to 300%)
+  const zoomLevel = parseInt(zoom) || 130;
+  if (zoomLevel < 25 || zoomLevel > 300) {
+    return res.status(400).json({ 
+      error: 'Zoom level must be between 25% and 300%' 
     });
   }
 
@@ -459,6 +467,16 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
         console.log(`⚠ Warning: Could not find anchor element for #${elementId}`);
       }
     }
+
+    // Apply zoom level to the page
+    const zoomLevel = parseInt(zoom) || 130;
+    const zoomFactor = zoomLevel / 100;
+    await page.evaluate((factor) => {
+      document.body.style.zoom = factor;
+    }, zoomFactor);
+
+    // Wait a bit for zoom to be applied
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Get page title for better naming (before closing browser)
     const pageTitle = await page.title();
