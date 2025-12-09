@@ -50,6 +50,7 @@ All notable changes to Screenshotter will be documented in this file.
   - 30 requests per hour per IP
   - Max 5 URLs per batch
   - Max 4K resolution (3840×2160)
+  - IPv6 subnet masking for proper IPv6 rate limiting (fixes ERR_ERL_KEY_GEN_IPV6)
 
 - **Deployment**
   - Render deployment configuration
