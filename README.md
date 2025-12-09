@@ -11,6 +11,7 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 ### 📸 Screenshot Capture
 - **Multiple Resolutions**: HD (1920×1080), Vertical/Stories (1080×1920), Full Page capture
 - **Custom Sizes**: Define and save your own screenshot dimensions (up to 4K)
+- **Zoom Control**: Adjust browser zoom level from 25% to 300% (default 130%) for better readability
 - **Batch Processing**: Capture multiple URLs at once (comma or line-separated)
 - **Smart Scrolling**: Automatically navigate to URL hashtags and anchors, even on SPAs
 
@@ -28,6 +29,7 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 ### 💾 Persistence
 - **Screenshot History**: Last 10 captures saved in local storage
 - **Custom Resolutions**: Your custom sizes are remembered
+- **Zoom Preference**: Your zoom level setting is saved
 - **Theme Preference**: Light/dark mode preference persists
 - **Recent URLs**: Quick access to previously captured URLs
 
@@ -68,8 +70,16 @@ npm run dev
 
 ### Basic Capture
 1. Enter a URL in the input field
-2. Select a resolution from the dropdown
-3. Press ⌘/Ctrl + Enter or click the capture button
+2. Adjust the zoom level slider (25% - 300%, default 130%)
+3. Select a resolution from the dropdown
+4. Press ⌘/Ctrl + Enter or click the capture button
+
+### Adjusting Zoom
+Use the zoom slider to control how content appears in your screenshot:
+- **130% (default)**: Ideal for most websites, making text more readable
+- **100%**: Normal browser zoom, good for pixel-perfect captures
+- **150-200%**: Great for capturing detailed UI elements or small text
+- **25-75%**: Useful for capturing more content in a single screenshot
 
 ### Batch Capture
 Enter multiple URLs separated by commas or newlines:
@@ -148,9 +158,17 @@ To prevent abuse, the API has built-in rate limiting:
   "url": "https://example.com",
   "width": 1920,
   "height": 1080,
-  "fullPage": false
+  "fullPage": false,
+  "zoom": 130
 }
 ```
+
+Parameters:
+- `url` (required): The website URL to capture
+- `width` (optional): Screenshot width in pixels (default: 1920)
+- `height` (optional): Screenshot height in pixels (default: 1080)
+- `fullPage` (optional): Capture entire scrollable page (default: false)
+- `zoom` (optional): Browser zoom level from 25 to 300 (default: 130)
 
 ## License
 
