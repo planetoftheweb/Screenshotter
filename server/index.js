@@ -83,7 +83,7 @@ app.get('/api/limits', (req, res) => {
 
 // Apply rate limiters to screenshot endpoint
 app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, res) => {
-  const { url, width = 1920, height = 1080, fullPage = false } = req.body;
+  const { url, width = 1920, height = 1080, fullPage = false, colorScheme = 'system' } = req.body;
 
   // Validate resolution limits
   const requestedWidth = parseInt(width);
@@ -208,6 +208,13 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       height: parseInt(height),
       deviceScaleFactor: 1,
     });
+
+    // Emulate color scheme preference
+    if (colorScheme === 'light' || colorScheme === 'dark') {
+      await page.emulateMediaFeatures([
+        { name: 'prefers-color-scheme', value: colorScheme }
+      ]);
+    }
 
     // Parse URL to check for hash/anchor
     const parsedUrl = new URL(url);

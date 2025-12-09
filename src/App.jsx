@@ -17,6 +17,10 @@ function App() {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   });
+  const [screenshotMode, setScreenshotMode] = useState(() => {
+    const savedMode = localStorage.getItem('screenshotMode');
+    return savedMode || 'system';
+  });
   const [history, setHistory] = useState(() => {
     const savedHistory = localStorage.getItem('history');
     return savedHistory ? JSON.parse(savedHistory) : [];
@@ -80,8 +84,20 @@ function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    localStorage.setItem('screenshotMode', screenshotMode);
+  }, [screenshotMode]);
+
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const toggleScreenshotMode = () => {
+    setScreenshotMode(prev => {
+      if (prev === 'system') return 'light';
+      if (prev === 'light') return 'dark';
+      return 'system';
+    });
   };
 
   useEffect(() => {
@@ -239,7 +255,8 @@ function App() {
             url: targetUrl,
             width: resolution.width,
             height: resolution.height,
-            fullPage: resolution.fullPage
+            fullPage: resolution.fullPage,
+            colorScheme: screenshotMode
           }),
         });
 
@@ -508,6 +525,15 @@ function App() {
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           ) : (
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          )}
+        </button>
+        <button onClick={toggleScreenshotMode} className="action-btn" title={`Screenshot Mode: ${screenshotMode === 'system' ? 'System Default' : screenshotMode === 'light' ? 'Light Mode' : 'Dark Mode'}`}>
+          {screenshotMode === 'system' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          ) : screenshotMode === 'light' ? (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle><circle cx="17" cy="9" r="1.5"></circle></svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle><path d="M21 12.79A9 9 0 0 1 12.21 21"></path></svg>
           )}
         </button>
         {showScrollTop && (
