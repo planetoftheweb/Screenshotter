@@ -17,6 +17,10 @@ function App() {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   });
+  const [screenshotMode, setScreenshotMode] = useState(() => {
+    const savedMode = localStorage.getItem('screenshotMode');
+    return savedMode === 'light' || savedMode === 'dark' ? savedMode : 'light';
+  });
   const [history, setHistory] = useState(() => {
     const savedHistory = localStorage.getItem('history');
     return savedHistory ? JSON.parse(savedHistory) : [];
@@ -80,8 +84,22 @@ function App() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    localStorage.setItem('screenshotMode', screenshotMode);
+  }, [screenshotMode]);
+
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  const toggleScreenshotMode = () => {
+    setScreenshotMode(prev => {
+      return prev === 'light' ? 'dark' : 'light';
+    });
+  };
+
+  const getScreenshotModeTooltip = () => {
+    return screenshotMode === 'light' ? 'Screenshot Mode: Light Mode' : 'Screenshot Mode: Dark Mode';
   };
 
   useEffect(() => {
@@ -239,7 +257,8 @@ function App() {
             url: targetUrl,
             width: resolution.width,
             height: resolution.height,
-            fullPage: resolution.fullPage
+            fullPage: resolution.fullPage,
+            colorScheme: screenshotMode
           }),
         });
 
@@ -663,7 +682,13 @@ function App() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !loading && url.trim()) {
+                const isMod = e.metaKey || e.ctrlKey;
+                if (isMod && e.key.toLowerCase() === 'a') {
+                  e.preventDefault();
+                  e.target.select();
+                  return;
+                }
+                if (e.key === 'Enter' && isMod && !loading && url.trim()) {
                   e.preventDefault();
                   captureScreenshot(e);
                 }
@@ -765,6 +790,56 @@ function App() {
                 </button>
               </div>
             )}
+            <button 
+              type="button" 
+              onClick={toggleScreenshotMode} 
+              className="action-btn" 
+              title={getScreenshotModeTooltip()}
+              style={{ 
+                height: '54px', 
+                width: '54px', 
+                minHeight: '54px', 
+                minWidth: '54px', 
+                maxHeight: '54px', 
+                maxWidth: '54px',
+                alignSelf: 'center'
+              }}
+            >
+              {screenshotMode === 'light' ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ display: 'block', margin: '0 auto' }}
+                >
+                  {/* Sun icon (matches theme toggle) */}
+                  <circle cx="12" cy="12" r="5" />
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ display: 'block', margin: '0 auto' }}
+                >
+                  {/* Moon icon (matches theme toggle) */}
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </button>
           </div>
 
           <button type="submit" className="capture-btn" disabled={loading || !url.trim()} aria-label="Capture">

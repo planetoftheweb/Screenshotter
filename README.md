@@ -13,6 +13,7 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 - **Custom Sizes**: Define and save your own screenshot dimensions (up to 4K)
 - **Batch Processing**: Capture multiple URLs at once (comma or line-separated)
 - **Smart Scrolling**: Automatically navigate to URL hashtags and anchors, even on SPAs
+- **Color Scheme Control**: Capture screenshots in light mode, dark mode, or system default
 
 ### 🧹 Automatic Cleanup
 - **Popup Removal**: Blocks cookie banners, newsletter popups, and consent dialogs
@@ -29,6 +30,7 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 - **Screenshot History**: Last 10 captures saved in local storage
 - **Custom Resolutions**: Your custom sizes are remembered
 - **Theme Preference**: Light/dark mode preference persists
+- **Screenshot Mode**: Color scheme preference (light/dark/system) is saved
 - **Recent URLs**: Quick access to previously captured URLs
 
 ### 🎨 Modern UI
@@ -69,7 +71,16 @@ npm run dev
 ### Basic Capture
 1. Enter a URL in the input field
 2. Select a resolution from the dropdown
-3. Press ⌘/Ctrl + Enter or click the capture button
+3. (Optional) Toggle screenshot color scheme mode (system/light/dark)
+4. Press ⌘/Ctrl + Enter or click the capture button
+
+### Screenshot Color Scheme
+Click the screenshot mode button in the top-right navigation to cycle through:
+- **System**: Uses the website's default color scheme
+- **Light**: Forces light mode for screenshot capture
+- **Dark**: Forces dark mode for screenshot capture
+
+Your preference is saved and will apply to all future screenshots.
 
 ### Batch Capture
 Enter multiple URLs separated by commas or newlines:

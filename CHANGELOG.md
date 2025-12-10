@@ -2,6 +2,19 @@
 
 All notable changes to Screenshotter will be documented in this file.
 
+## [Unreleased]
+
+### Added
+- **Screenshot Color Scheme Control**: New toggle button to capture screenshots in light mode, dark mode, or system default
+  - Three modes: System (default), Light, Dark
+  - Mode preference persists in localStorage
+  - Uses Puppeteer's `emulateMediaFeatures` to set `prefers-color-scheme`
+  - Independent from UI theme preference
+
+### Changed
+- **Screenshot color enforcement**: Server now aggressively forces the requested color scheme (emulated media, meta `color-scheme`, class/data-attribute overrides, mutation observer) and attempts to auto-toggle site theme switches before capturing.
+- **Textarea shortcuts**: URL input now handles Cmd/Ctrl+A for select-all while preserving Cmd/Ctrl+Enter to capture.
+
 ## [1.0.0] - 2025-12-07
 
 ### 🎉 Initial Release

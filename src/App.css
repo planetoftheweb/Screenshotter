@@ -353,8 +353,11 @@ body {
 .controls-wrapper {
   flex: 0 0 auto;
   position: relative;
-  min-width: 180px;
+  min-width: 240px;
   z-index: 100;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 /* Custom Resolution Dropdown */

@@ -83,7 +83,7 @@ app.get('/api/limits', (req, res) => {
 
 // Apply rate limiters to screenshot endpoint
 app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, res) => {
-  const { url, width = 1920, height = 1080, fullPage = false } = req.body;
+  const { url, width = 1920, height = 1080, fullPage = false, colorScheme = 'system' } = req.body;
 
   // Validate resolution limits
   const requestedWidth = parseInt(width);
@@ -209,6 +209,124 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       deviceScaleFactor: 1,
     });
 
+    // Emulate color scheme preference aggressively so the captured page honors the user's choice
+    if (colorScheme === 'light' || colorScheme === 'dark') {
+      // 1) Standard media emulation (covers most CSS @media queries)
+      await page.emulateMedia({ colorScheme });
+      await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: colorScheme }]);
+
+      // 2) Force color scheme for pages that read matchMedia or the color-scheme meta tag
+      await page.evaluateOnNewDocument((scheme) => {
+        // Keep original matchMedia for non color-scheme queries
+        const originalMatchMedia = window.matchMedia ? window.matchMedia.bind(window) : null;
+
+        window.matchMedia = (query) => {
+          if (query === '(prefers-color-scheme: dark)' || query === '(prefers-color-scheme: light)') {
+            const matches = scheme === 'dark' ? query.includes('dark') : query.includes('light');
+            return {
+              matches,
+              media: query,
+              onchange: null,
+              addListener: () => {},
+              removeListener: () => {},
+              addEventListener: () => {},
+              removeEventListener: () => {},
+              dispatchEvent: () => false,
+            };
+          }
+          return originalMatchMedia ? originalMatchMedia(query) : { matches: false, media: query };
+        };
+
+        const desired = scheme === 'dark' ? 'dark' : 'light';
+        const opposite = desired === 'dark' ? 'light' : 'dark';
+        const themeAttrs = [
+          'data-theme',
+          'data-color-mode',
+          'data-color-scheme',
+          'data-mode',
+          'data-bs-theme',
+          'theme'
+        ];
+
+        const applyColorScheme = () => {
+          const setAttrs = (el) => {
+            if (!el) return;
+            el.classList.remove(opposite, `theme-${opposite}`);
+            el.classList.add(desired, `theme-${desired}`);
+            themeAttrs.forEach(attr => el.setAttribute(attr, desired));
+          };
+
+          setAttrs(document.documentElement);
+          setAttrs(document.body);
+
+          // align dataset theme/mode keys
+          [document.documentElement, document.body].forEach((el) => {
+            if (el?.dataset) {
+              Object.keys(el.dataset).forEach((k) => {
+                const lower = k.toLowerCase();
+                if (lower.includes('theme') || lower.includes('mode')) {
+                  el.dataset[k] = desired;
+                }
+              });
+            }
+          });
+
+          // meta tag
+          const existing = document.querySelector('meta[name="color-scheme"]');
+          if (existing) {
+            existing.setAttribute('content', desired);
+          } else if (document.head) {
+            const meta = document.createElement('meta');
+            meta.name = 'color-scheme';
+            meta.content = desired;
+            document.head.appendChild(meta);
+          }
+
+          // minimal override stylesheet
+          const styleId = '__screenshotter-force-scheme';
+          if (!document.getElementById(styleId) && document.head) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.textContent = `
+              :root { color-scheme: ${desired} !important; }
+              html, body {
+                background: ${desired === 'light' ? '#ffffff' : '#000000'} !important;
+                color: ${desired === 'light' ? '#111111' : '#eeeeee'} !important;
+              }
+              html.${opposite}, body.${opposite}, html.theme-${opposite}, body.theme-${opposite} {
+                background: ${desired === 'light' ? '#ffffff' : '#000000'} !important;
+                color: ${desired === 'light' ? '#111111' : '#eeeeee'} !important;
+              }
+            `;
+            document.head.appendChild(style);
+          }
+        };
+
+        // Apply immediately or once the DOM is ready
+        if (document.head) {
+          applyColorScheme();
+        } else {
+          document.addEventListener('DOMContentLoaded', applyColorScheme, { once: true });
+        }
+
+        // Keep enforcing if the page flips classes/attrs after load
+        const observer = new MutationObserver(() => applyColorScheme());
+        observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class', ...themeAttrs] });
+        if (document.body) {
+          observer.observe(document.body, { attributes: true, attributeFilter: ['class', ...themeAttrs] });
+        } else {
+          document.addEventListener('DOMContentLoaded', () => {
+            if (document.body) {
+              observer.observe(document.body, { attributes: true, attributeFilter: ['class', ...themeAttrs] });
+            }
+          }, { once: true });
+        }
+
+        // Expose for debugging
+        window.__screenshotterApplyColorScheme = applyColorScheme;
+      }, colorScheme);
+    }
+
     // Parse URL to check for hash/anchor
     const parsedUrl = new URL(url);
     const hash = parsedUrl.hash;
@@ -221,6 +339,127 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
 
     // Wait a bit for any animations/lazy loading
     await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // If a site uses its own theme toggle, try to flip it toward the requested scheme
+    if (colorScheme === 'light' || colorScheme === 'dark') {
+      await page.evaluate(async (desired) => {
+        const opposite = desired === 'dark' ? 'light' : 'dark';
+
+        const isDark = () => {
+          const html = document.documentElement;
+          const body = document.body;
+          const hasDarkClass = (el) => el?.classList?.contains('dark') || el?.classList?.contains('theme-dark');
+          const dataTheme = (el) => {
+            const attrs = ['data-theme', 'data-color-mode', 'data-color-scheme', 'data-mode', 'data-bs-theme', 'theme'];
+            return attrs.some(a => el?.getAttribute?.(a)?.toLowerCase() === 'dark');
+          };
+          return hasDarkClass(html) || hasDarkClass(body) || dataTheme(html) || dataTheme(body);
+        };
+
+        const clickToggleIfNeeded = () => {
+          const toggles = Array.from(document.querySelectorAll('button, [role="button"], input[type="checkbox"], label, a')).filter((el) => {
+            const text = (el.innerText || el.getAttribute('aria-label') || el.getAttribute('title') || '').toLowerCase();
+            const classes = (el.className || '').toLowerCase();
+            return (
+              text.includes('theme') ||
+              text.includes('mode') ||
+              text.includes('dark') ||
+              text.includes('light') ||
+              classes.includes('theme') ||
+              classes.includes('toggle') ||
+              classes.includes('dark') ||
+              classes.includes('light')
+            );
+          });
+
+          for (const el of toggles) {
+            // Skip obviously unrelated buttons
+            if (el.disabled) continue;
+            el.click();
+            return true;
+          }
+          return false;
+        };
+
+        // If already in desired state, do nothing
+        if (desired === 'light' && !isDark()) return;
+        if (desired === 'dark' && isDark()) return;
+
+        // Try clicking a toggle once
+        clickToggleIfNeeded();
+
+        // Re-apply our color-scheme hook if present
+        if (typeof window.__screenshotterApplyColorScheme === 'function') {
+          window.__screenshotterApplyColorScheme();
+        }
+
+        // Wait a bit to allow SPA toggles to mutate DOM, then enforce again
+        await new Promise(res => setTimeout(res, 400));
+        if (typeof window.__screenshotterApplyColorScheme === 'function') {
+          window.__screenshotterApplyColorScheme();
+        }
+      }, colorScheme);
+    }
+
+    // Force page-level theme when sites ignore prefers-color-scheme
+    if (colorScheme === 'light' || colorScheme === 'dark') {
+      await page.evaluate((scheme) => {
+        const desired = scheme === 'dark' ? 'dark' : 'light';
+        const opposite = desired === 'dark' ? 'light' : 'dark';
+
+        const setAttrs = (el) => {
+          if (!el) return;
+          el.classList.remove(opposite);
+          el.classList.add(desired);
+          [
+            'data-theme',
+            'data-color-mode',
+            'data-color-scheme',
+            'data-mode',
+            'data-bs-theme',
+            'theme'
+          ].forEach(attr => el.setAttribute(attr, desired));
+        };
+
+        setAttrs(document.documentElement);
+        setAttrs(document.body);
+
+        // Ensure meta color-scheme aligns
+        const meta = document.querySelector('meta[name="color-scheme"]');
+        if (meta) {
+          meta.setAttribute('content', desired);
+        } else if (document.head) {
+          const m = document.createElement('meta');
+          m.name = 'color-scheme';
+          m.content = desired;
+          document.head.appendChild(m);
+        }
+
+        // Add a minimal override stylesheet to neutralize dark class-driven themes
+        const styleId = '__screenshotter-force-scheme';
+        if (!document.getElementById(styleId)) {
+          const style = document.createElement('style');
+          style.id = styleId;
+          style.textContent = `
+            :root { color-scheme: ${desired} !important; }
+            html, body {
+              background: ${desired === 'light' ? '#ffffff' : '#000000'} !important;
+              color: ${desired === 'light' ? '#111111' : '#eeeeee'} !important;
+            }
+            html.dark, body.dark { background: ${desired === 'light' ? '#ffffff' : '#000000'} !important; }
+          `;
+          document.head.appendChild(style);
+        }
+
+        // If the page stores a theme on the root element dataset, update it
+        if (document.documentElement?.dataset) {
+          const key = Object.keys(document.documentElement.dataset).find(k => k.toLowerCase().includes('theme') || k.toLowerCase().includes('mode'));
+          if (key) {
+            document.documentElement.dataset[key] = desired;
+          }
+        }
+      }, colorScheme);
+    }
 
     // CLEANUP: Close any popups/modals that might be blocking (Runs for all URLs)
     await page.evaluate(() => {
