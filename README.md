@@ -14,6 +14,7 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 - **Zoom Control**: Adjust browser zoom level from 25% to 300% (default 130%) for better readability
 - **Batch Processing**: Capture multiple URLs at once (comma or line-separated)
 - **Smart Scrolling**: Automatically navigate to URL hashtags and anchors, even on SPAs
+- **Color Scheme Control**: Capture screenshots in light mode, dark mode, or system default
 
 ### 🧹 Automatic Cleanup
 - **Popup Removal**: Blocks cookie banners, newsletter popups, and consent dialogs
@@ -31,6 +32,7 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 - **Custom Resolutions**: Your custom sizes are remembered
 - **Zoom Preference**: Your zoom level setting is saved
 - **Theme Preference**: Light/dark mode preference persists
+- **Screenshot Mode**: Color scheme preference (light/dark/system) is saved
 - **Recent URLs**: Quick access to previously captured URLs
 
 ### 🎨 Modern UI
@@ -72,7 +74,8 @@ npm run dev
 1. Enter a URL in the input field
 2. Adjust the zoom level slider (25% - 300%, default 130%)
 3. Select a resolution from the dropdown
-4. Press ⌘/Ctrl + Enter or click the capture button
+4. (Optional) Toggle screenshot color scheme mode (light/dark)
+5. Press ⌘/Ctrl + Enter or click the capture button
 
 ### Adjusting Zoom
 Use the zoom slider to control how content appears in your screenshot:
@@ -80,6 +83,13 @@ Use the zoom slider to control how content appears in your screenshot:
 - **100%**: Normal browser zoom, good for pixel-perfect captures
 - **150-200%**: Great for capturing detailed UI elements or small text
 - **25-75%**: Useful for capturing more content in a single screenshot
+
+### Screenshot Color Scheme
+Click the screenshot mode button to cycle through:
+- **Light**: Forces light mode for screenshot capture
+- **Dark**: Forces dark mode for screenshot capture
+
+Your preference is saved and will apply to all future screenshots.
 
 ### Batch Capture
 Enter multiple URLs separated by commas or newlines:
@@ -135,7 +145,7 @@ example.com/#features
 
 ## Rate Limits
 
-To prevent abuse, the API has built-in rate limiting:
+To prevent abuse, the API has built-in rate limiting with proper IPv6 support:
 
 | Limit | Value |
 |-------|-------|
@@ -143,6 +153,8 @@ To prevent abuse, the API has built-in rate limiting:
 | Requests per hour | 30 per IP |
 | URLs per batch | 5 max |
 | Max resolution | 3840×2160 (4K) |
+
+**IPv6 Support**: Rate limiting uses `ipKeyGenerator` from express-rate-limit, which properly handles IPv6 subnet masking to prevent circumvention while maintaining privacy.
 
 ## API Endpoints
 
@@ -172,7 +184,7 @@ Parameters:
 
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) file for details
 
 ## Author
 
