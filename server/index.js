@@ -210,10 +210,14 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       }
     });
 
-    // Set viewport
+    // Set viewport and apply zoom by resizing viewport (preserves real screenshot pixels)
+    const zoomFactor = zoomLevel / 100;
+    const viewportWidth = Math.max(1, Math.round(parseInt(width) / zoomFactor));
+    const viewportHeight = Math.max(1, Math.round(parseInt(height) / zoomFactor));
+
     await page.setViewport({
-      width: parseInt(width),
-      height: parseInt(height),
+      width: viewportWidth,
+      height: viewportHeight,
       deviceScaleFactor: 1,
     });
 
@@ -707,15 +711,7 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       }
     }
 
-    // Apply zoom level to the page using CSS transform for better compatibility
-    const zoomFactor = zoomLevel / 100;
-    await page.evaluate((factor) => {
-      document.body.style.transform = `scale(${factor})`;
-      document.body.style.transformOrigin = '0 0';
-      document.body.style.width = `${100 / factor}%`;
-    }, zoomFactor);
-
-    // Wait a bit for zoom to be applied
+    // Wait a bit for zoomed layout to settle
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     // Get page title for better naming (before closing browser)
