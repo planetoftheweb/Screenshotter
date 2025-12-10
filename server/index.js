@@ -210,20 +210,23 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       }
     });
 
-    // Set viewport and apply zoom via DevTools page scale (preserves layout fidelity)
+    // Set viewport and apply zoom:
+    // - For zoom in (>=100%), use deviceScaleFactor to increase apparent size.
+    // - For zoom out (<100%), enlarge the viewport to fit more content.
     const zoomFactor = zoomLevel / 100;
-    const viewportWidth = Math.max(1, Math.round(parseInt(width) / zoomFactor));
-    const viewportHeight = Math.max(1, Math.round(parseInt(height) / zoomFactor));
-
-    await page.setViewport({
-      width: viewportWidth,
-      height: viewportHeight,
-      deviceScaleFactor: 1,
-    });
-
-    // Apply page-scale so the capture truly reflects zoom
-    const client = await page.target().createCDPSession();
-    await client.send('Emulation.setPageScaleFactor', { pageScaleFactor: zoomFactor });
+    if (zoomFactor >= 1) {
+      await page.setViewport({
+        width: parseInt(width),
+        height: parseInt(height),
+        deviceScaleFactor: zoomFactor,
+      });
+    } else {
+      await page.setViewport({
+        width: Math.max(1, Math.round(parseInt(width) / zoomFactor)),
+        height: Math.max(1, Math.round(parseInt(height) / zoomFactor)),
+        deviceScaleFactor: 1,
+      });
+    }
 
     // Emulate color scheme preference aggressively so the captured page honors the user's choice
     if (colorScheme === 'light' || colorScheme === 'dark') {
