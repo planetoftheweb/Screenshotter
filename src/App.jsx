@@ -19,7 +19,7 @@ function App() {
   });
   const [screenshotMode, setScreenshotMode] = useState(() => {
     const savedMode = localStorage.getItem('screenshotMode');
-    return savedMode || 'system';
+    return savedMode === 'light' || savedMode === 'dark' ? savedMode : 'light';
   });
   const [history, setHistory] = useState(() => {
     const savedHistory = localStorage.getItem('history');
@@ -94,16 +94,12 @@ function App() {
 
   const toggleScreenshotMode = () => {
     setScreenshotMode(prev => {
-      if (prev === 'system') return 'light';
-      if (prev === 'light') return 'dark';
-      return 'system';
+      return prev === 'light' ? 'dark' : 'light';
     });
   };
 
   const getScreenshotModeTooltip = () => {
-    if (screenshotMode === 'system') return 'Screenshot Mode: System Default';
-    if (screenshotMode === 'light') return 'Screenshot Mode: Light Mode';
-    return 'Screenshot Mode: Dark Mode';
+    return screenshotMode === 'light' ? 'Screenshot Mode: Light Mode' : 'Screenshot Mode: Dark Mode';
   };
 
   useEffect(() => {
@@ -533,15 +529,6 @@ function App() {
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
           )}
         </button>
-        <button onClick={toggleScreenshotMode} className="action-btn" title={getScreenshotModeTooltip()}>
-          {screenshotMode === 'system' ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
-          ) : screenshotMode === 'light' ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle><circle cx="17" cy="9" r="1.5"></circle></svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle><path d="M21 12.79A9 9 0 0 1 12.21 21"></path></svg>
-          )}
-        </button>
         {showScrollTop && (
           <button onClick={scrollToTop} className="action-btn" title="Scroll to Top">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
@@ -695,7 +682,13 @@ function App() {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !loading && url.trim()) {
+                const isMod = e.metaKey || e.ctrlKey;
+                if (isMod && e.key.toLowerCase() === 'a') {
+                  e.preventDefault();
+                  e.target.select();
+                  return;
+                }
+                if (e.key === 'Enter' && isMod && !loading && url.trim()) {
                   e.preventDefault();
                   captureScreenshot(e);
                 }
@@ -797,6 +790,56 @@ function App() {
                 </button>
               </div>
             )}
+            <button 
+              type="button" 
+              onClick={toggleScreenshotMode} 
+              className="action-btn" 
+              title={getScreenshotModeTooltip()}
+              style={{ 
+                height: '54px', 
+                width: '54px', 
+                minHeight: '54px', 
+                minWidth: '54px', 
+                maxHeight: '54px', 
+                maxWidth: '54px',
+                alignSelf: 'center'
+              }}
+            >
+              {screenshotMode === 'light' ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ display: 'block', margin: '0 auto' }}
+                >
+                  {/* Sun icon (matches theme toggle) */}
+                  <circle cx="12" cy="12" r="5" />
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{ display: 'block', margin: '0 auto' }}
+                >
+                  {/* Moon icon (matches theme toggle) */}
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              )}
+            </button>
           </div>
 
           <button type="submit" className="capture-btn" disabled={loading || !url.trim()} aria-label="Capture">
