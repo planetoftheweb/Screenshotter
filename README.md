@@ -136,7 +136,7 @@ example.com/#features
 
 ## Rate Limits
 
-To prevent abuse, the API has built-in rate limiting:
+To prevent abuse, the API has built-in rate limiting with proper IPv6 support:
 
 | Limit | Value |
 |-------|-------|
@@ -144,6 +144,8 @@ To prevent abuse, the API has built-in rate limiting:
 | Requests per hour | 30 per IP |
 | URLs per batch | 5 max |
 | Max resolution | 3840×2160 (4K) |
+
+**IPv6 Support**: Rate limiting uses `ipKeyGenerator` from express-rate-limit, which properly handles IPv6 subnet masking to prevent circumvention while maintaining privacy.
 
 ## API Endpoints
 
@@ -165,7 +167,7 @@ To prevent abuse, the API has built-in rate limiting:
 
 ## License
 
-MIT
+MIT - See [LICENSE](LICENSE) file for details
 
 ## Author
 
