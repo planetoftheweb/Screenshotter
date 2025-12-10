@@ -2,18 +2,22 @@
 
 All notable changes to Screenshotter will be documented in this file.
 
-## [Unreleased]
+## [1.1.0] - 2025-12-10
 
 ### Added
-- **Screenshot Color Scheme Control**: New toggle button to capture screenshots in light mode, dark mode, or system default
-  - Three modes: System (default), Light, Dark
-  - Mode preference persists in localStorage
-  - Uses Puppeteer's `emulateMediaFeatures` to set `prefers-color-scheme`
-  - Independent from UI theme preference
+- **Zoom Control**: Added a zoom slider (25% - 300%) to control the scale of the captured page.
+  - Improves readability or captures more content.
+  - Uses device scaling for zoom-in (fidelity) and viewport expansion for zoom-out (coverage).
+- **Screenshot Color Scheme Control**: New toggle button to capture screenshots in light mode, dark mode, or system default.
+  - Three modes: System (default), Light, Dark.
+  - Mode preference persists in localStorage.
+  - Uses Puppeteer's `emulateMediaFeatures` and aggressive DOM overrides to enforce the scheme.
+  - Attempts to auto-click site-specific theme toggles.
 
 ### Changed
 - **Screenshot color enforcement**: Server now aggressively forces the requested color scheme (emulated media, meta `color-scheme`, class/data-attribute overrides, mutation observer) and attempts to auto-toggle site theme switches before capturing.
 - **Textarea shortcuts**: URL input now handles Cmd/Ctrl+A for select-all while preserving Cmd/Ctrl+Enter to capture.
+- **Navigation Reliability**: Changed Puppeteer navigation wait condition to `networkidle0` and increased post-load delay to 3s to fix iframe rendering issues (Issue #8).
 
 ## [1.0.0] - 2025-12-07
 

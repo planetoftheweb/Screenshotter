@@ -333,12 +333,12 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
 
     // Navigate to the URL with a timeout
     await page.goto(url, {
-      waitUntil: 'networkidle2',
+      waitUntil: 'networkidle0',
       timeout: 30000,
     });
 
     // Wait a bit for any animations/lazy loading
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
 
     // If a site uses its own theme toggle, try to flip it toward the requested scheme
     if (colorScheme === 'light' || colorScheme === 'dark') {
