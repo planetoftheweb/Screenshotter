@@ -210,23 +210,18 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       }
     });
 
-    // Set viewport and apply zoom:
-    // - For zoom in (>=100%), use deviceScaleFactor to increase apparent size.
-    // - For zoom out (<100%), enlarge the viewport to fit more content.
+    // Set viewport based on zoom level to ensure output resolution matches width/height
+    // This mimics browser zoom by adjusting the viewport size and device scale factor
+    // Resulting image size = viewport * deviceScaleFactor
     const zoomFactor = zoomLevel / 100;
-    if (zoomFactor >= 1) {
-      await page.setViewport({
-        width: parseInt(width),
-        height: parseInt(height),
-        deviceScaleFactor: zoomFactor,
-      });
-    } else {
-      await page.setViewport({
-        width: Math.max(1, Math.round(parseInt(width) / zoomFactor)),
-        height: Math.max(1, Math.round(parseInt(height) / zoomFactor)),
-        deviceScaleFactor: 1,
-      });
-    }
+    const viewportWidth = Math.max(1, Math.round(parseInt(width) / zoomFactor));
+    const viewportHeight = Math.max(1, Math.round(parseInt(height) / zoomFactor));
+
+    await page.setViewport({
+      width: viewportWidth,
+      height: viewportHeight,
+      deviceScaleFactor: zoomFactor,
+    });
 
     // Emulate color scheme preference aggressively so the captured page honors the user's choice
     if (colorScheme === 'light' || colorScheme === 'dark') {
@@ -731,12 +726,8 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
     };
 
     if (!fullPage) {
-      screenshotOptions.clip = {
-        x: 0,
-        y: 0,
-        width: parseInt(width),
-        height: parseInt(height),
-      };
+      // No clip - we want the full viewport content which is sized exactly for the zoom
+      // If we clip, we might cut off content or capture the wrong area due to viewport scaling
     }
 
     const screenshot = await page.screenshot(screenshotOptions);

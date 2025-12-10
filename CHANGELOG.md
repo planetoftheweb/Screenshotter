@@ -14,7 +14,7 @@ All notable changes to Screenshotter will be documented in this file.
 ### Changed
 - **Screenshot color enforcement**: Server now aggressively forces the requested color scheme (emulated media, meta `color-scheme`, class/data-attribute overrides, mutation observer) and attempts to auto-toggle site theme switches before capturing.
 - **Textarea shortcuts**: URL input now handles Cmd/Ctrl+A for select-all while preserving Cmd/Ctrl+Enter to capture.
-- **Zoom behavior**: Zoom now uses device scale for zoom-in and expanded viewport for zoom-out to make captures at different zoom levels visibly differ.
+- **Zoom behavior**: Zoom implementation updated to use viewport scaling combined with device scale factor, ensuring accurate browser zoom simulation for both zoom-in and zoom-out scenarios while maintaining requested output resolution.
 
 ## [1.0.0] - 2025-12-07
 
