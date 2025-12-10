@@ -210,7 +210,7 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       }
     });
 
-    // Set viewport and apply zoom by resizing viewport (preserves real screenshot pixels)
+    // Set viewport and apply zoom via DevTools page scale (preserves layout fidelity)
     const zoomFactor = zoomLevel / 100;
     const viewportWidth = Math.max(1, Math.round(parseInt(width) / zoomFactor));
     const viewportHeight = Math.max(1, Math.round(parseInt(height) / zoomFactor));
@@ -220,6 +220,10 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       height: viewportHeight,
       deviceScaleFactor: 1,
     });
+
+    // Apply page-scale so the capture truly reflects zoom
+    const client = await page.target().createCDPSession();
+    await client.send('Emulation.setPageScaleFactor', { pageScaleFactor: zoomFactor });
 
     // Emulate color scheme preference aggressively so the captured page honors the user's choice
     if (colorScheme === 'light' || colorScheme === 'dark') {
