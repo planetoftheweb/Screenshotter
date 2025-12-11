@@ -17,8 +17,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 // RATE LIMITING CONFIG
 // ===================
 const LIMITS = {
-  MAX_REQUESTS_PER_MINUTE: 5,      // Per IP
-  MAX_REQUESTS_PER_HOUR: 30,       // Per IP
+  MAX_REQUESTS_PER_MINUTE: process.env.NODE_ENV === 'test' ? 100 : 5,      // Per IP
+  MAX_REQUESTS_PER_HOUR: process.env.NODE_ENV === 'test' ? 1000 : 30,       // Per IP
   MAX_URLS_PER_BATCH: 5,           // Per request
   MAX_WIDTH: 3840,                 // 4K max
   MAX_HEIGHT: 2160,                // 4K max

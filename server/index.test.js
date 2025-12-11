@@ -33,4 +33,64 @@ describe('Screenshot API', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.image).toBeDefined();
   }, 20000); // 20s timeout for real browser interaction
+
+  it('should reject resolution exceeding limits', async () => {
+    const res = await request(app)
+      .post('/api/screenshot')
+      .send({
+        url: 'https://example.com',
+        width: 5000,
+        height: 5000
+      });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/exceeds maximum/);
+  });
+
+  it('should include rate limit headers', async () => {
+    // Send a request that fails validation gracefully (missing URL)
+    // This returns 400 but should still have rate limit headers
+    const res = await request(app)
+      .post('/api/screenshot')
+      .send({}); // missing URL
+    
+    // Express-rate-limit (standardHeaders: true) adds these headers
+    // Note: Node http client lowercases headers
+    // standardHeaders uses 'ratelimit-*' (draft-7) or just 'ratelimit' fields?
+    // Let's check for 'ratelimit-limit' which is the modern standard
+    const limit = res.headers['ratelimit-limit'] || res.headers['x-ratelimit-limit'];
+    const remaining = res.headers['ratelimit-remaining'] || res.headers['x-ratelimit-remaining'];
+    
+    expect(limit).toBeDefined();
+    expect(remaining).toBeDefined();
+  });
+
+  // Note: We don't have explicit zoom validation logic in server/index.js currently,
+  // the code just parses it: const zoomLevel = parseInt(zoom) || 130;
+  // If we wanted to validate zoom, we would add that logic and a test here.
+  // For now, let's verify that sending a zoom parameter doesn't crash the server.
+  
+  it('should handle zoom parameter without crashing', async () => {
+    const res = await request(app)
+      .post('/api/screenshot')
+      .send({
+        url: 'https://example.com',
+        zoom: 200
+      });
+    
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  }, 20000);
+
+  it('should handle fullPage parameter without crashing', async () => {
+    const res = await request(app)
+      .post('/api/screenshot')
+      .send({
+        url: 'https://example.com',
+        fullPage: true
+      });
+    
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+  }, 20000);
 });
+
