@@ -212,7 +212,6 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
     // Emulate color scheme preference aggressively so the captured page honors the user's choice
     if (colorScheme === 'light' || colorScheme === 'dark') {
       // 1) Standard media emulation (covers most CSS @media queries)
-      await page.emulateMedia({ colorScheme });
       await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: colorScheme }]);
 
       // 2) Force color scheme for pages that read matchMedia or the color-scheme meta tag
