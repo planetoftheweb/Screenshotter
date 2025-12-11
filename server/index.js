@@ -746,6 +746,11 @@ app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 Screenshot server running on http://localhost:${PORT}`);
-});
+// Only start the server if this file is the main module (not imported for testing)
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Screenshot server running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
