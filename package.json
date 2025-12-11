@@ -11,6 +11,7 @@
     "build": "vite build",
     "start": "node server/index.js",
     "lint": "eslint .",
+    "test": "vitest",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -36,6 +37,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
-    "vite": "^7.2.4"
+    "supertest": "^7.1.4",
+    "vite": "^7.2.4",
+    "vitest": "^4.0.15"
   }
 }
