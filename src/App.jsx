@@ -539,42 +539,10 @@ function App() {
       <div className="gradient-bg"></div>
       <div className="noise"></div>
 
-      <div className="scroll-nav">
-        <a 
-          href="https://github.com/planetoftheweb/Screenshotter" 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          className="action-btn" 
-          title="GitHub Repository"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-        </a>
-        <button onClick={() => setShowHelp(true)} className="action-btn" title="Help & Tutorial">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-        </button>
-        <button onClick={toggleTheme} className="theme-toggle action-btn" title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-          {theme === 'dark' ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          )}
-        </button>
-        {showScrollTop && (
-          <button onClick={scrollToTop} className="action-btn" title="Scroll to Top">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-          </button>
-        )}
-        {history.length > 0 && !historyVisible && (
-          <button onClick={scrollToHistory} className="action-btn" title="Scroll to Recent Captures">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          </button>
-        )}
-      </div>
-
-      <main className="container" id="top">
-        <header className="header">
-          <div className="logo">
-            <svg className="logo-icon-svg" width="54" height="54" viewBox="0 0 3600 3600" xmlns="http://www.w3.org/2000/svg">
+      <header className="top-bar">
+        <div className="top-bar-container">
+          <div className="logo" onClick={scrollToTop} style={{ cursor: 'pointer' }}>
+            <svg className="logo-icon-svg" width="32" height="32" viewBox="0 0 3600 3600" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="logo-gradient-1" x1="0%" y1="0%" x2="100%" y2="100%">
                   <stop offset="0%" stopColor="#4f46e5" />
@@ -610,10 +578,47 @@ function App() {
                 fill="url(#logo-gradient-2)" 
               />
             </svg>
-            <h1>Screenshotter</h1>
+            <h1 className="logo-text">Screenshotter</h1>
           </div>
+
+          <div className="top-nav">
+            <a 
+              href="https://github.com/planetoftheweb/Screenshotter" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="action-btn" 
+              title="GitHub Repository"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+            </a>
+            <button onClick={() => setShowHelp(true)} className="action-btn" title="Help & Tutorial">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </button>
+            <button onClick={toggleTheme} className="theme-toggle action-btn" title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+              {theme === 'dark' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              )}
+            </button>
+            {showScrollTop && (
+              <button onClick={scrollToTop} className="action-btn" title="Scroll to Top">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+              </button>
+            )}
+            {history.length > 0 && !historyVisible && (
+              <button onClick={scrollToHistory} className="action-btn" title="Scroll to Recent Captures">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <main className="container" id="top">
+        <div className="hero-section">
           <p className="tagline">Capture, Crop, and Organize Professional Screenshots for Your Content</p>
-        </header>
+        </div>
 
         {showHelp && (
           <div className="help-overlay" onClick={() => setShowHelp(false)}>
