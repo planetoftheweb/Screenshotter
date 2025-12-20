@@ -292,13 +292,18 @@ body {
   margin-bottom: 0.75rem;
 }
 
+.logo-icon-svg {
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+  animation: pulse 3s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
 .logo-icon {
   font-size: 2.5rem;
   background: var(--gradient-hero);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: pulse 3s ease-in-out infinite;
 }
 
 @keyframes pulse {
