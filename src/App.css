@@ -1240,6 +1240,33 @@ body {
   margin-top: 0.5rem;
 }
 
+.footer-links {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.footer-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s ease;
+}
+
+.footer-link:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+  background: var(--bg-active);
+  transform: translateY(-2px);
+}
+
 .custom-res-modal {
   max-width: 450px;
 }
