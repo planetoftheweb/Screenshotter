@@ -40,11 +40,13 @@ function App() {
   const [crop, setCrop] = useState();
   const [showHelp, setShowHelp] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
   const [showResDropdown, setShowResDropdown] = useState(false);
   const imgRef = useRef(null);
   const downloadRef = useRef(null);
   const textareaRef = useRef(null);
   const dropdownRef = useRef(null);
+  const historySectionRef = useRef(null);
 
   // Auto-resize textarea based on content
   const adjustTextareaHeight = () => {
@@ -71,13 +73,32 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setHistoryVisible(entry.isIntersecting);
+      },
+      { 
+        threshold: 0.1,
+        rootMargin: '0px'
+      }
+    );
+
+    if (historySectionRef.current) {
+      observer.observe(historySectionRef.current);
+    }
+
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 300);
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    handleScroll();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [history.length]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -543,7 +564,7 @@ function App() {
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
           </button>
         )}
-        {history.length > 0 && (
+        {history.length > 0 && !historyVisible && (
           <button onClick={scrollToHistory} className="action-btn" title="Scroll to Recent Captures">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
           </button>
@@ -942,7 +963,7 @@ function App() {
         )}
 
         {history.length > 0 && (
-          <div id="recent-captures" className="history-section">
+          <div id="recent-captures" ref={historySectionRef} className="history-section">
             <div className="history-header">
               <h3>Recent Captures</h3>
               <div className="history-actions">
