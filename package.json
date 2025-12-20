@@ -11,7 +11,6 @@
     "build": "vite build",
     "start": "node server/index.js",
     "lint": "eslint .",
-    "test": "vitest",
     "preview": "vite preview"
   },
   "dependencies": {

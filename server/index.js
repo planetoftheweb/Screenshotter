@@ -17,8 +17,8 @@ const isProduction = process.env.NODE_ENV === 'production';
 // RATE LIMITING CONFIG
 // ===================
 const LIMITS = {
-  MAX_REQUESTS_PER_MINUTE: process.env.NODE_ENV === 'test' ? 100 : 5,      // Per IP
-  MAX_REQUESTS_PER_HOUR: process.env.NODE_ENV === 'test' ? 1000 : 30,       // Per IP
+  MAX_REQUESTS_PER_MINUTE: 5,      // Per IP
+  MAX_REQUESTS_PER_HOUR: 30,       // Per IP
   MAX_URLS_PER_BATCH: 5,           // Per request
   MAX_WIDTH: 3840,                 // 4K max
   MAX_HEIGHT: 2160,                // 4K max
@@ -746,11 +746,6 @@ app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
-// Only start the server if this file is the main module (not imported for testing)
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Screenshot server running on http://localhost:${PORT}`);
-  });
-}
-
-export default app;
+app.listen(PORT, () => {
+  console.log(`🚀 Screenshot server running on http://localhost:${PORT}`);
+});
