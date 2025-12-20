@@ -296,6 +296,20 @@ body {
   filter: drop-shadow(0 0 8px var(--accent-glow));
   animation: pulse 3s ease-in-out infinite;
   flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-scanline {
+  animation: scanline 4s linear infinite;
+  transform-box: fill-box;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 0.2; }
+  90% { opacity: 0.2; }
+  100% { transform: translateY(2400px); opacity: 0; }
 }
 
 .logo-icon {
