@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import JSZip from 'jszip';
+import * as fabric from 'fabric';
 import 'react-image-crop/dist/ReactCrop.css';
 import './App.css';
 
@@ -37,14 +38,19 @@ function App() {
   const [newCustomRes, setNewCustomRes] = useState({ width: '', height: '', label: '' });
   const [editingResolution, setEditingResolution] = useState(null);
   const [isCropping, setIsCropping] = useState(false);
+  const [isAnnotating, setIsAnnotating] = useState(false);
   const [crop, setCrop] = useState();
   const [showHelp, setShowHelp] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
   const [showResDropdown, setShowResDropdown] = useState(false);
   const imgRef = useRef(null);
   const downloadRef = useRef(null);
   const textareaRef = useRef(null);
   const dropdownRef = useRef(null);
+  const historySectionRef = useRef(null);
+  const fabricCanvasRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // Auto-resize textarea based on content
   const adjustTextareaHeight = () => {
@@ -71,13 +77,32 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setHistoryVisible(entry.isIntersecting);
+      },
+      { 
+        threshold: 0.1,
+        rootMargin: '0px'
+      }
+    );
+
+    if (historySectionRef.current) {
+      observer.observe(historySectionRef.current);
+    }
+
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 300);
     };
 
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+    handleScroll();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, [history.length]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -513,42 +538,269 @@ function App() {
     }
   };
 
+  // ===================
+  // ANNOTATION LOGIC
+  // ===================
+  
+  const initFabric = useCallback(() => {
+    if (!canvasRef.current || fabricCanvasRef.current) return;
+
+    const canvas = new fabric.Canvas(canvasRef.current, {
+      width: imgRef.current.clientWidth,
+      height: imgRef.current.clientHeight,
+      selection: true,
+    });
+
+    fabricCanvasRef.current = canvas;
+  }, []);
+
+  useEffect(() => {
+    if (isAnnotating && !fabricCanvasRef.current && imgRef.current) {
+      initFabric();
+    }
+    
+    return () => {
+      if (!isAnnotating && fabricCanvasRef.current) {
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
+      }
+    };
+  }, [isAnnotating, initFabric]);
+
+  const addRect = () => {
+    if (!fabricCanvasRef.current) return;
+    const rect = new fabric.Rect({
+      left: 50,
+      top: 50,
+      fill: 'transparent',
+      stroke: '#ff0000',
+      strokeWidth: 4,
+      width: 100,
+      height: 100,
+      cornerColor: 'white',
+      cornerStrokeColor: '#ff0000',
+      transparentCorners: false,
+      cornerStyle: 'circle',
+    });
+    fabricCanvasRef.current.add(rect);
+    fabricCanvasRef.current.setActiveObject(rect);
+  };
+
+  const addArrow = () => {
+    if (!fabricCanvasRef.current) return;
+    
+    // Simple arrow implementation using a Path
+    const path = new fabric.Path('M 0 0 L 50 0 M 50 0 L 40 -10 M 50 0 L 40 10', {
+      left: 100,
+      top: 100,
+      stroke: '#ff0000',
+      strokeWidth: 4,
+      fill: 'transparent',
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round',
+      scaleX: 2,
+      scaleY: 2,
+    });
+    
+    fabricCanvasRef.current.add(path);
+    fabricCanvasRef.current.setActiveObject(path);
+  };
+
+  const addText = () => {
+    if (!fabricCanvasRef.current) return;
+    const text = new fabric.IText('Double click to edit', {
+      left: 100,
+      top: 150,
+      fontFamily: 'Outfit',
+      fontSize: 24,
+      fill: '#ff0000',
+    });
+    fabricCanvasRef.current.add(text);
+    fabricCanvasRef.current.setActiveObject(text);
+  };
+
+  const addRedact = () => {
+    if (!fabricCanvasRef.current) return;
+    const rect = new fabric.Rect({
+      left: 150,
+      top: 150,
+      fill: '#000000',
+      width: 150,
+      height: 50,
+      cornerColor: 'white',
+      cornerStrokeColor: '#000000',
+      transparentCorners: false,
+      cornerStyle: 'circle',
+    });
+    fabricCanvasRef.current.add(rect);
+    fabricCanvasRef.current.setActiveObject(rect);
+  };
+
+  const addBlur = () => {
+    if (!fabricCanvasRef.current) return;
+    // Using a semi-transparent grey with a border to represent blur
+    // In a real implementation we might use a pattern or filter, 
+    // but for this UI, a "privacy" style box works well.
+    const rect = new fabric.Rect({
+      left: 200,
+      top: 200,
+      fill: 'rgba(150, 150, 150, 0.8)',
+      stroke: 'rgba(255, 255, 255, 0.5)',
+      strokeWidth: 2,
+      width: 150,
+      height: 50,
+      cornerColor: 'white',
+      cornerStrokeColor: '#999',
+      transparentCorners: false,
+      cornerStyle: 'circle',
+    });
+    fabricCanvasRef.current.add(rect);
+    fabricCanvasRef.current.setActiveObject(rect);
+  };
+
+  const deleteSelected = () => {
+    if (!fabricCanvasRef.current) return;
+    const activeObjects = fabricCanvasRef.current.getActiveObjects();
+    fabricCanvasRef.current.remove(...activeObjects);
+    fabricCanvasRef.current.discardActiveObject();
+    fabricCanvasRef.current.renderAll();
+  };
+
+  const saveAnnotations = async () => {
+    if (!fabricCanvasRef.current || !imgRef.current) return;
+
+    // To save, we need to create a temporary canvas that combines the original image and annotations
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const image = imgRef.current;
+    
+    // Set size to actual image dimensions
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+
+    // 1. Draw original image
+    ctx.drawImage(image, 0, 0);
+
+    // 2. Draw annotations (scaled)
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    
+    // We can use fabric's internal scaling or just get the objects and draw them
+    // Simpler way: fabric.Canvas.toDataURL with multiplier
+    const dataUrl = fabricCanvasRef.current.toDataURL({
+      format: 'png',
+      multiplier: scaleX, // Assuming scaleX and scaleY are same, which they should be for aspect ratio
+    });
+
+    const annotationImage = new Image();
+    annotationImage.src = dataUrl;
+    await new Promise(resolve => annotationImage.onload = resolve);
+    
+    ctx.drawImage(annotationImage, 0, 0);
+
+    const finalImage = canvas.toDataURL('image/png');
+    setScreenshot(finalImage);
+    setIsAnnotating(false);
+    
+    // Add to history
+    setHistory(prev => {
+      const newItem = {
+        id: Date.now(),
+        url: url,
+        screenshot: finalImage,
+        pageInfo: pageInfo,
+        resolution: { ...resolution, label: 'Annotated' },
+        timestamp: new Date().toLocaleTimeString()
+      };
+      return [newItem, ...prev].slice(0, 5);
+    });
+  };
+
   return (
     <div className="app">
       <div className="gradient-bg"></div>
       <div className="noise"></div>
 
-      <div className="scroll-nav">
-        <button onClick={() => setShowHelp(true)} className="action-btn" title="Help & Tutorial">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
-        </button>
-        <button onClick={toggleTheme} className="theme-toggle action-btn" title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
-          {theme === 'dark' ? (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-          )}
-        </button>
-        {showScrollTop && (
-          <button onClick={scrollToTop} className="action-btn" title="Scroll to Top">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
-          </button>
-        )}
-        {history.length > 0 && (
-          <button onClick={scrollToHistory} className="action-btn" title="Scroll to Recent Captures">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-          </button>
-        )}
-      </div>
+      <header className="top-bar">
+        <div className="top-bar-container">
+          <div className="logo" onClick={scrollToTop} style={{ cursor: 'pointer' }}>
+            <svg className="logo-icon-svg" width="32" height="32" viewBox="0 0 3600 3600" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="logo-gradient-1" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#4f46e5" />
+                  <stop offset="50%" stopColor="#9333ea" />
+                  <stop offset="100%" stopColor="#db2777" />
+                </linearGradient>
+                <linearGradient id="logo-gradient-2" x1="0%" y1="100%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#10b981" />
+                </linearGradient>
+                <filter id="logo-glow">
+                  <feGaussianBlur stdDeviation="80" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
+              </defs>
+              <path 
+                d="m3298.1 327.38h-2996.2c-166.36 0-301.92 135.56-301.92 302.06v2341.3c0 166.5 135.56 301.92 301.92 301.92h2996c166.5 0 302.06-135.56 302.06-302.06v-2341.1c0-166.5-135.56-302.06-301.92-302.06z" 
+                fill="url(#logo-gradient-1)" 
+              />
+              {/* Capture Corners */}
+              <g stroke="white" strokeWidth="120" strokeLinecap="round" opacity="0.9">
+                <path d="M600 800h-200v200" fill="none" />
+                <path d="M3000 800h200v200" fill="none" />
+                <path d="M600 2800h-200v-200" fill="none" />
+                <path d="M3000 2800h200v-200" fill="none" />
+              </g>
+              {/* Selection Line */}
+              <rect x="800" y="1000" width="2000" height="1600" fill="none" stroke="white" strokeWidth="60" strokeDasharray="160,160" opacity="0.6" />
+              {/* Scanline */}
+              <rect className="logo-scanline" x="300" y="327" width="3000" height="150" fill="white" opacity="0.4" filter="url(#logo-glow)" />
+              <path 
+                d="m1800 1200c-331.37 0-600 268.63-600 600s268.63 600 600 600 600-268.63 600-600-268.63-600-600-600zm0 1000c-220.91 0-400-179.09-400-400s179.09-400 400-400 400 179.09 400 400-179.09 400-400 400z" 
+                fill="url(#logo-gradient-2)" 
+              />
+            </svg>
+            <h1 className="logo-text">Screenshotter</h1>
+          </div>
+
+          <div className="top-nav">
+            <a 
+              href="https://github.com/planetoftheweb/Screenshotter" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="action-btn" 
+              title="GitHub Repository"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+            </a>
+            <button onClick={() => setShowHelp(true)} className="action-btn" title="Help & Tutorial">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            </button>
+            <button onClick={toggleTheme} className="theme-toggle action-btn" title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
+              {theme === 'dark' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              )}
+            </button>
+            {showScrollTop && (
+              <button onClick={scrollToTop} className="action-btn" title="Scroll to Top">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+              </button>
+            )}
+            {history.length > 0 && !historyVisible && (
+              <button onClick={scrollToHistory} className="action-btn" title="Scroll to Recent Captures">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </button>
+            )}
+          </div>
+        </div>
+      </header>
 
       <main className="container" id="top">
-        <header className="header">
-          <div className="logo">
-            <span className="logo-icon">◈</span>
-            <h1>Screenshotter</h1>
-          </div>
+        <div className="hero-section">
           <p className="tagline">Capture, Crop, and Organize Professional Screenshots for Your Content</p>
-        </header>
+        </div>
 
         {showHelp && (
           <div className="help-overlay" onClick={() => setShowHelp(false)}>
@@ -846,7 +1098,7 @@ function App() {
             {loading ? (
               <span className="spinner"></span>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                 <circle cx="12" cy="13" r="4"></circle>
               </svg>
@@ -884,6 +1136,40 @@ function App() {
                     </button>
                   </div>
                 </div>
+              ) : isAnnotating ? (
+                <div className="annotation-container">
+                  <img ref={imgRef} src={screenshot} alt="Screenshot to annotate" className="annotation-img" />
+                  <div className="canvas-wrapper">
+                    <canvas ref={canvasRef} />
+                  </div>
+                  <div className="annotation-controls">
+                    <button onClick={addRect} className="action-btn" title="Add Rectangle">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                    </button>
+                    <button onClick={addArrow} className="action-btn" title="Add Arrow">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                    <button onClick={addText} className="action-btn" title="Add Text">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+                    </button>
+                    <button onClick={addRedact} className="action-btn" title="Redact (Solid Box)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                    </button>
+                    <button onClick={addBlur} className="action-btn" title="Blur (Privacy Box)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"></path></svg>
+                    </button>
+                    <button onClick={deleteSelected} className="action-btn delete" title="Delete Selected">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                    <div className="divider-v"></div>
+                    <button onClick={saveAnnotations} className="action-btn download" title="Apply Annotations">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                    <button onClick={() => setIsAnnotating(false)} className="action-btn" title="Cancel">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <img src={screenshot} alt="Screenshot preview" />
@@ -900,6 +1186,9 @@ function App() {
                       <path d="M6 2v14a2 2 0 0 0 2 2h14" />
                       <path d="M18 22V8a2 2 0 0 0-2-2H2" />
                     </svg>
+                  </button>
+                  <button onClick={() => setIsAnnotating(true)} className="action-btn copy" title="Annotate Image">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                   </button>
                     <button onClick={copyToClipboard} className="action-btn copy" title={copied ? 'Copied!' : 'Copy to Clipboard'}>
                       {copied ? (
@@ -933,7 +1222,7 @@ function App() {
         )}
 
         {history.length > 0 && (
-          <div id="recent-captures" className="history-section">
+          <div id="recent-captures" ref={historySectionRef} className="history-section">
             <div className="history-header">
               <h3>Recent Captures</h3>
               <div className="history-actions">
@@ -990,6 +1279,17 @@ function App() {
         <footer className="footer">
           <p>Professional screenshots optimized for web articles and social media</p>
           <p className="rate-limit-info">Rate limit: 5 screenshots/min • 30/hour • Max 5 URLs per batch</p>
+          <div className="footer-links">
+            <a 
+              href="https://github.com/planetoftheweb/Screenshotter" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="footer-link"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle', marginRight: '6px' }}><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
+              View on GitHub
+            </a>
+          </div>
         </footer>
       </main>
     </div>

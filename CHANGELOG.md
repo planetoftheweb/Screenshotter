@@ -2,6 +2,23 @@
 
 All notable changes to Screenshotter will be documented in this file.
 
+## [1.2.0] - 2025-12-20
+
+### Added
+- **Annotation Layer**: Integrated Fabric.js to allow drawing directly on captured screenshots.
+  - **Tools**: Added Rectangle, Arrow, and Text annotation tools.
+  - **Editable Layer**: Annotations remain fully movable, resizable (non-proportionally), and deletable until applied.
+  - **Pure Blur Tool**: Added a privacy blur tool that uses a "frosted glass" preview and applies a real Gaussian blur to the final image.
+  - **Blur Strength Control**: Added a contextual slider to adjust the intensity of the blur for each box.
+- **Top Navigation Refactor**: Moved the sidebar icons to a sleek, fixed top bar to prevent UI overlap on smaller screens.
+- **Improved Branding**: Updated the main logo with a vibrant gradient design and animated "capture scanline" artifacts.
+- **Scroll-to-History Logic**: The "Recent Captures" button now intelligently hides itself when the history section is already visible on screen.
+
+### Fixed
+- **Render Memory Issues**: Optimized backend Puppeteer logic with a persistent browser instance and memory-saving flags to prevent intermittent failures on Render's free tier.
+- **Logo Visuals**: Removed a mismatched artifact in the logo corners for a cleaner, symmetrical look.
+- **Scaling Behavior**: Fixed annotation scaling to allow free-form resizing (non-proportional) via corner handles.
+
 ## [1.1.0] - 2025-12-10
 
 ### Added

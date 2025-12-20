@@ -1,4 +1,4 @@
-# Agent Context: Screenshotter v1.0.0
+# Agent Context: Screenshotter v1.2.0
 
 This document provides context and architectural details for AI agents working on the Screenshotter codebase.
 
@@ -8,7 +8,8 @@ Screenshotter is a full-stack application designed to capture precise, high-qual
 
 1. **Smart Scrolling**: Robust handling of deep links (URL hashes), ensuring the screenshot captures the intended section even on complex SPAs or sites with broken native scrolling.
 2. **Popup Removal**: Aggressive blocking and removal of cookie banners, consent dialogs, and newsletter popups.
-3. **Client-Side Cropping**: Full-resolution cropping without server round-trips.
+3. **Annotation Layer**: Built-in editing tools (Text, Arrows, Boxes, Blur) using Fabric.js for high-fidelity markups.
+4. **Client-Side Cropping**: Full-resolution cropping without server round-trips.
 
 ## Architecture
 
@@ -25,7 +26,7 @@ Screenshotter is a full-stack application designed to capture precise, high-qual
 ### Backend (`server/`)
 - **Framework**: Express 5
 - **Core Engine**: Puppeteer with @sparticuz/chromium (production) or regular Puppeteer (development)
-- **Rate Limiting**: express-rate-limit (in-memory)
+- **Memory Optimization**: Uses a persistent browser instance with specific flags (`--disable-dev-shm-usage`, etc.) to stay within Render's free tier limits.
 
 ### API Endpoints
 | Endpoint | Method | Description |
@@ -52,45 +53,24 @@ Three-layer defense:
 2. **Cookie Pre-setting**: Sets consent cookies for Iubenda, OneTrust, CookieYes, etc.
 3. **DOM Cleanup**: Removes fixed/sticky elements, modals, `[role="alertdialog"]`
 
-### Rate Limiting
-```javascript
-const LIMITS = {
-  MAX_REQUESTS_PER_MINUTE: 5,
-  MAX_REQUESTS_PER_HOUR: 30,
-  MAX_URLS_PER_BATCH: 5,
-  MAX_WIDTH: 3840,
-  MAX_HEIGHT: 2160,
-};
-```
-
-**IPv6 Handling**: Uses `ipKeyGenerator` from express-rate-limit for proper IPv6 subnet masking. The `getClientKey` function combines:
-- IPv6 subnet masking via `ipKeyGenerator`
-- Fallback chain: `req.ip` → `x-forwarded-for` → `'unknown'`
-- Prevents ERR_ERL_KEY_GEN_IPV6 security warnings
+### Annotation Layer (`src/App.jsx`)
+Powered by Fabric.js for object-oriented canvas manipulation:
+- **Pure Blur Logic**: Uses a two-pass approach. First, a frosted-glass preview pattern is used for real-time editing. During the final save, a real Gaussian blur filter is applied to the original image context within the clipped regions defined by the blur boxes.
+- **Non-Proportional Scaling**: Enabled via `uniformScaling: false` on the Fabric canvas.
+- **Persistence**: Annotated images are saved back to history as new base64 strings.
 
 ## UI/UX Standards
 
 ### Button Design
 All interactive buttons follow icon-only design:
 - **Shape**: Rounded square (`border-radius: 14px`)
-- **Size**: 54px × 54px for primary actions
+- **Size**: 54px × 54px for primary actions, 32px for top navigation
 - **Content**: Simple SVG icon, no text labels
 - **Tooltips**: Use `data-tooltip` attribute for instant CSS tooltips (no JS delay)
 
-### Tooltip Guidelines
-- Use `data-tooltip` attribute (not native `title`)
-- Parent containers need `overflow: visible`
-- Use `z-index` on hover to prevent clipping by siblings
-
-### Screenshot Overlay
-- Position: `absolute` (not `fixed`) relative to screenshot container
-- Appears on hover over `.screenshot-preview`
-- Contains: Download, Crop, Copy, Copy URL buttons
-
-### History Items
-- Displays: thumbnail, timestamp, resolution label, action buttons
-- URL shown via tooltip on copy button (not as text)
-- `z-index: 10` on hover for tooltip visibility
+### Layout & Navigation
+- **Fixed Top Bar**: Ensures navigation is always accessible and doesn't overlap the capture preview.
+- **Animated Logo**: Uses SVG filters (glow) and CSS keyframes (scanline, pulse) for a "capture" aesthetic.
 
 ## Development
 
@@ -128,11 +108,11 @@ services:
 ## File Structure
 ```
 ├── src/
-│   ├── App.jsx           # Main React component (~900 lines)
-│   ├── App.css           # All styling (~1300 lines)
+│   ├── App.jsx           # Main React component (~1400 lines)
+│   ├── App.css           # All styling (~1550 lines)
 │   └── main.jsx          # React entry point
 ├── server/
-│   └── index.js          # Express server + Puppeteer (~500 lines)
+│   └── index.js          # Express server + Puppeteer (~600 lines)
 ├── render.yaml           # Render deployment config
 ├── package.json          # Dependencies and scripts
 ├── agents.md             # This file
@@ -145,14 +125,8 @@ services:
 ### "Chrome not found" on Render
 - Solution: Use `@sparticuz/chromium` with `puppeteer-core` in production
 
-### Express 5 catch-all route error
-- Wrong: `app.get('*', ...)`
-- Right: `app.get('/{*splat}', ...)`
+### Render Memory Limits (Free Tier)
+- Solution: Use a persistent browser instance instead of launching a new one per request. Ensure `page.close()` is called in a `finally` block or via timeout.
 
-### Tooltips clipped by container
-- Add `overflow: visible` to parent
-- Add `z-index` bump on hover
-
-### Rate limit not persisting
-- Current: In-memory (resets on deploy)
-- Future: Consider Redis for persistence
+### Fabric.js Scaling Aspect Ratio
+- Solution: Set `uniformScaling: false` on the `fabric.Canvas` instance to allow stretching boxes.

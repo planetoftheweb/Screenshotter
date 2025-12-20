@@ -13,12 +13,73 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const isProduction = process.env.NODE_ENV === 'production';
 
+// Persistent browser instance to save memory
+let browserInstance = null;
+let browserLaunchPromise = null;
+
+const getBrowser = async () => {
+  if (browserInstance && browserInstance.connected) {
+    return browserInstance;
+  }
+
+  if (browserLaunchPromise) {
+    return browserLaunchPromise;
+  }
+
+  browserLaunchPromise = (async () => {
+    try {
+      let browser;
+      if (isProduction) {
+        const chromium = await import('@sparticuz/chromium');
+        browser = await puppeteerCore.launch({
+          args: [
+            ...chromium.default.args,
+            '--disable-dev-shm-usage',
+            '--disable-setuid-sandbox',
+            '--no-sandbox',
+            '--disable-gpu',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+          ],
+          defaultViewport: chromium.default.defaultViewport,
+          executablePath: await chromium.default.executablePath(),
+          headless: chromium.default.headless,
+        });
+      } else {
+        browser = await puppeteer.launch({
+          headless: 'new',
+          args: [
+            '--no-sandbox', 
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-gpu'
+          ],
+        });
+      }
+      
+      browser.on('disconnected', () => {
+        browserInstance = null;
+        browserLaunchPromise = null;
+      });
+
+      browserInstance = browser;
+      return browser;
+    } catch (err) {
+      browserLaunchPromise = null;
+      throw err;
+    }
+  })();
+
+  return browserLaunchPromise;
+};
+
 // ===================
 // RATE LIMITING CONFIG
 // ===================
 const LIMITS = {
-  MAX_REQUESTS_PER_MINUTE: process.env.NODE_ENV === 'test' ? 100 : 5,      // Per IP
-  MAX_REQUESTS_PER_HOUR: process.env.NODE_ENV === 'test' ? 1000 : 30,       // Per IP
+  MAX_REQUESTS_PER_MINUTE: 5,      // Per IP
+  MAX_REQUESTS_PER_HOUR: 30,       // Per IP
   MAX_URLS_PER_BATCH: 5,           // Per request
   MAX_WIDTH: 3840,                 // 4K max
   MAX_HEIGHT: 2160,                // 4K max
@@ -99,28 +160,22 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
     return res.status(400).json({ error: 'URL is required' });
   }
 
-  let browser;
+  let page;
   try {
     // Validate URL
     new URL(url);
 
-    // Use @sparticuz/chromium in production, regular puppeteer in development
-    if (isProduction) {
-      const chromium = await import('@sparticuz/chromium');
-      browser = await puppeteerCore.launch({
-        args: chromium.default.args,
-        defaultViewport: chromium.default.defaultViewport,
-        executablePath: await chromium.default.executablePath(),
-        headless: chromium.default.headless,
-      });
-    } else {
-      browser = await puppeteer.launch({
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      });
-    }
+    const browser = await getBrowser();
+    page = await browser.newPage();
 
-    const page = await browser.newPage();
+    // Set a timeout for the entire page operation to prevent memory leaks from hanging pages
+    let pageTimeout = setTimeout(async () => {
+      if (page) {
+        try {
+          await page.close();
+        } catch (e) {}
+      }
+    }, LIMITS.REQUEST_TIMEOUT_MS);
 
     // PRE-SET CONSENT COOKIES before loading the page
     // This prevents consent popups from ever appearing
@@ -718,7 +773,8 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
 
     const screenshot = await page.screenshot(screenshotOptions);
 
-    await browser.close();
+    clearTimeout(pageTimeout);
+    await page.close();
 
     // Send the screenshot as base64
     const base64Image = screenshot.toString('base64');
@@ -731,8 +787,9 @@ app.post('/api/screenshot', minuteRateLimiter, hourlyRateLimiter, async (req, re
       hash: hash || null,
     });
   } catch (error) {
-    if (browser) {
-      await browser.close();
+    if (typeof pageTimeout !== 'undefined') clearTimeout(pageTimeout);
+    if (page) {
+      await page.close().catch(() => {});
     }
     console.error('Screenshot error:', error);
     res.status(500).json({
@@ -746,11 +803,6 @@ app.get('/{*splat}', (req, res) => {
   res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 });
 
-// Only start the server if this file is the main module (not imported for testing)
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  app.listen(PORT, () => {
-    console.log(`🚀 Screenshot server running on http://localhost:${PORT}`);
-  });
-}
-
-export default app;
+app.listen(PORT, () => {
+  console.log(`🚀 Screenshot server running on http://localhost:${PORT}`);
+});

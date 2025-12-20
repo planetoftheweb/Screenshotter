@@ -84,62 +84,90 @@ body {
   mix-blend-mode: multiply;
 }
 
-.scroll-nav {
+.top-bar {
   position: fixed;
-  top: 1.5rem;
-  right: 1.5rem;
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  align-items: flex-end; /* Align buttons to the right */
-}
-
-.nav-btn {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border-subtle);
-  padding: 0.5rem 1rem;
-  border-radius: 10px;
-  font-size: 0.85rem;
-  font-weight: 500;
-  font-family: 'Outfit', sans-serif;
-  cursor: pointer;
-  transition: all 0.2s ease;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: rgba(13, 14, 21, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border-subtle);
+  z-index: 1000;
   display: flex;
   align-items: center;
-  justify-content: center;
+}
+
+[data-theme='light'] .top-bar {
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.top-bar-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.top-nav {
+  display: flex;
   gap: 0.5rem;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  align-items: center;
 }
 
-.nav-btn:hover {
-  transform: translateY(-2px);
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+.top-bar .action-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 8px;
+  box-shadow: none;
+  background: transparent;
+  border: 1px solid transparent;
 }
 
-/* Theme toggle was previously absolute, let's adjust it to not overlap if needed or leave as is. 
-   The scroll nav is fixed, so it will float over everything. 
-   If width is small, we might want to adjust. */
+.top-bar .action-btn:hover {
+  background: var(--bg-elevated);
+  border-color: var(--border-subtle);
+  transform: none;
+}
+
+.logo-text {
+  font-size: 1.25rem !important;
+  margin: 0 !important;
+  background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.hero-section {
+  text-align: center;
+  margin-top: 1rem;
+  margin-bottom: 2.5rem;
+  animation: fadeInDown 0.6s ease-out;
+}
+
+.tagline {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+  opacity: 0.8;
+}
 
 .container {
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 3rem 2rem;
+  padding: 80px 2rem 3rem 2rem;
   position: relative;
   z-index: 1;
 }
 
 .header {
-  text-align: center;
-  margin-bottom: 3rem;
-  animation: fadeInDown 0.6s ease-out;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  position: relative;
+  display: none; /* Moved to top-bar */
 }
 
 .theme-toggle {
@@ -292,13 +320,37 @@ body {
   margin-bottom: 0.75rem;
 }
 
+.top-bar .logo {
+  margin-bottom: 0;
+  justify-content: flex-start;
+}
+
+.logo-icon-svg {
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+  animation: pulse 3s ease-in-out infinite;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.logo-scanline {
+  animation: scanline 4s linear infinite;
+  transform-box: fill-box;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(0); opacity: 0; }
+  10% { opacity: 0.4; }
+  90% { opacity: 0.4; }
+  100% { transform: translateY(2400px); opacity: 0; }
+}
+
 .logo-icon {
   font-size: 2.5rem;
   background: var(--gradient-hero);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  animation: pulse 3s ease-in-out infinite;
 }
 
 @keyframes pulse {
@@ -995,31 +1047,6 @@ body {
   display: none;
 }
 
-.scroll-nav .action-btn::after {
-  bottom: auto;
-  top: 100%;
-  transform: translateX(-100%) translateY(12px); /* Default for right-aligned */
-  left: auto;
-  right: 0;
-}
-
-.scroll-nav .action-btn:hover::after {
-  transform: translateX(-100%) translateY(8px);
-}
-
-/* Tooltip position specifically for scroll-nav since it's on the right edge */
-.scroll-nav .action-btn::after {
-  left: auto;
-  right: 120%; /* Position to the left of the button */
-  top: 50%;
-  bottom: auto;
-  transform: translateY(-50%) translateX(10px);
-}
-
-.scroll-nav .action-btn:hover::after {
-  transform: translateY(-50%) translateX(0);
-}
-
 .action-btn.download {
   background: var(--accent-primary);
   color: white;
@@ -1238,6 +1265,33 @@ body {
   font-size: 0.75rem;
   opacity: 0.6;
   margin-top: 0.5rem;
+}
+
+.footer-links {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.footer-link {
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s ease;
+}
+
+.footer-link:hover {
+  color: var(--text-primary);
+  border-color: var(--accent-primary);
+  background: var(--bg-active);
+  transform: translateY(-2px);
 }
 
 .custom-res-modal {
