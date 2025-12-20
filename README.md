@@ -21,19 +21,23 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 - **DOM Cleanup**: Removes fixed overlays and modals before capture
 
 ### ✂️ Post-Capture Tools
+- **Annotation Layer**: Add rectangles, arrows, and text to highlight important areas
+- **Pure Blur Tool**: Obscure sensitive information with a controllable, natural-looking blur (no gray tint)
 - **Client-Side Cropping**: Crop any screenshot to focus on a specific area at full resolution
 - **Download Options**: Download individual screenshots or batch download all as ZIP
 - **Copy to Clipboard**: One-click copy for easy sharing
 - **URL Retention**: Copy the original URL back for reference
 
 ### 💾 Persistence
-- **Screenshot History**: Last 10 captures saved in local storage
+- **Screenshot History**: Last 10 captures saved in local storage (including annotated versions)
 - **Custom Resolutions**: Your custom sizes are remembered
 - **Theme Preference**: Light/dark mode preference persists
 - **Screenshot Mode**: Color scheme preference (light/dark/system) is saved
 - **Recent URLs**: Quick access to previously captured URLs
 
 ### 🎨 Modern UI
+- **Fixed Top Navigation**: Improved layout that works perfectly on all screen sizes
+- **Interactive Logo**: Vibrant animated logo with capture artifacts
 - **Light/Dark Mode**: Toggle between themes
 - **Instant Tooltips**: Hover over any button for instant help
 - **Responsive Design**: Works on desktop and mobile
@@ -46,7 +50,7 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 | Frontend | React 19, Vite 7 |
 | Backend | Node.js, Express 5 |
 | Automation | Puppeteer, @sparticuz/chromium |
-| Libraries | react-image-crop, jszip, express-rate-limit |
+| Libraries | Fabric.js, react-image-crop, jszip, express-rate-limit |
 | Deployment | Render |
 
 ## Installation
@@ -73,6 +77,14 @@ npm run dev
 2. Select a resolution from the dropdown
 3. (Optional) Toggle screenshot color scheme mode (system/light/dark)
 4. Press ⌘/Ctrl + Enter or click the capture button
+
+### Annotations & Blurring
+1. After capturing, click the **Pencil icon** (Annotate) on the screenshot preview
+2. Choose a tool:
+   - **Rectangle/Arrow/Text**: Draw directly on the image
+   - **Blur**: Add a blur area. Use the **Blur slider** to adjust intensity
+3. Drag corners to resize (free-form resizing supported)
+4. Click the **Checkmark** (Apply) to merge your changes or **X** to cancel
 
 ### Screenshot Color Scheme
 Click the screenshot mode button in the top-right navigation to cycle through:
