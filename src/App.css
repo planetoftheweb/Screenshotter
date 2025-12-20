@@ -307,8 +307,8 @@ body {
 
 @keyframes scanline {
   0% { transform: translateY(0); opacity: 0; }
-  10% { opacity: 0.2; }
-  90% { opacity: 0.2; }
+  10% { opacity: 0.4; }
+  90% { opacity: 0.4; }
   100% { transform: translateY(2400px); opacity: 0; }
 }
 

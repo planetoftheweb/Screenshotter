@@ -585,27 +585,30 @@ function App() {
                   <stop offset="0%" stopColor="#06b6d4" />
                   <stop offset="100%" stopColor="#10b981" />
                 </linearGradient>
+                <filter id="logo-glow">
+                  <feGaussianBlur stdDeviation="80" result="blur" />
+                  <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                </filter>
               </defs>
               <path 
                 d="m3298.1 327.38h-2996.2c-166.36 0-301.92 135.56-301.92 302.06v2341.3c0 166.5 135.56 301.92 301.92 301.92h2996c166.5 0 302.06-135.56 302.06-302.06v-2341.1c0-166.5-135.56-302.06-301.92-302.06z" 
                 fill="url(#logo-gradient-1)" 
               />
               {/* Capture Corners */}
-              <g stroke="white" strokeWidth="120" strokeLinecap="round" opacity="0.8">
+              <g stroke="white" strokeWidth="120" strokeLinecap="round" opacity="0.9">
                 <path d="M600 800h-200v200" fill="none" />
                 <path d="M3000 800h200v200" fill="none" />
                 <path d="M600 2800h-200v-200" fill="none" />
                 <path d="M3000 2800h200v-200" fill="none" />
               </g>
               {/* Selection Line */}
-              <rect x="800" y="1000" width="2000" height="1600" fill="none" stroke="white" strokeWidth="40" strokeDasharray="120,120" opacity="0.3" />
+              <rect x="800" y="1000" width="2000" height="1600" fill="none" stroke="white" strokeWidth="60" strokeDasharray="160,160" opacity="0.6" />
               {/* Scanline */}
-              <rect className="logo-scanline" x="300" y="327" width="3000" height="100" fill="white" opacity="0.1" />
+              <rect className="logo-scanline" x="300" y="327" width="3000" height="150" fill="white" opacity="0.4" filter="url(#logo-glow)" />
               <path 
                 d="m1800 1200c-331.37 0-600 268.63-600 600s268.63 600 600 600 600-268.63 600-600-268.63-600-600-600zm0 1000c-220.91 0-400-179.09-400-400s179.09-400 400-400 400 179.09 400 400-179.09 400-400 400z" 
                 fill="url(#logo-gradient-2)" 
               />
-              <circle cx="2800" cy="800" r="150" fill="white" opacity="0.8" />
             </svg>
             <h1>Screenshotter</h1>
           </div>
