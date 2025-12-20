@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import ReactCrop, { centerCrop, makeAspectCrop } from 'react-image-crop';
 import JSZip from 'jszip';
+import * as fabric from 'fabric';
 import 'react-image-crop/dist/ReactCrop.css';
 import './App.css';
 
@@ -37,6 +38,7 @@ function App() {
   const [newCustomRes, setNewCustomRes] = useState({ width: '', height: '', label: '' });
   const [editingResolution, setEditingResolution] = useState(null);
   const [isCropping, setIsCropping] = useState(false);
+  const [isAnnotating, setIsAnnotating] = useState(false);
   const [crop, setCrop] = useState();
   const [showHelp, setShowHelp] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -47,6 +49,8 @@ function App() {
   const textareaRef = useRef(null);
   const dropdownRef = useRef(null);
   const historySectionRef = useRef(null);
+  const fabricCanvasRef = useRef(null);
+  const canvasRef = useRef(null);
 
   // Auto-resize textarea based on content
   const adjustTextareaHeight = () => {
@@ -534,6 +538,184 @@ function App() {
     }
   };
 
+  // ===================
+  // ANNOTATION LOGIC
+  // ===================
+  
+  const initFabric = useCallback(() => {
+    if (!canvasRef.current || fabricCanvasRef.current) return;
+
+    const canvas = new fabric.Canvas(canvasRef.current, {
+      width: imgRef.current.clientWidth,
+      height: imgRef.current.clientHeight,
+      selection: true,
+    });
+
+    fabricCanvasRef.current = canvas;
+  }, []);
+
+  useEffect(() => {
+    if (isAnnotating && !fabricCanvasRef.current && imgRef.current) {
+      initFabric();
+    }
+    
+    return () => {
+      if (!isAnnotating && fabricCanvasRef.current) {
+        fabricCanvasRef.current.dispose();
+        fabricCanvasRef.current = null;
+      }
+    };
+  }, [isAnnotating, initFabric]);
+
+  const addRect = () => {
+    if (!fabricCanvasRef.current) return;
+    const rect = new fabric.Rect({
+      left: 50,
+      top: 50,
+      fill: 'transparent',
+      stroke: '#ff0000',
+      strokeWidth: 4,
+      width: 100,
+      height: 100,
+      cornerColor: 'white',
+      cornerStrokeColor: '#ff0000',
+      transparentCorners: false,
+      cornerStyle: 'circle',
+    });
+    fabricCanvasRef.current.add(rect);
+    fabricCanvasRef.current.setActiveObject(rect);
+  };
+
+  const addArrow = () => {
+    if (!fabricCanvasRef.current) return;
+    
+    // Simple arrow implementation using a Path
+    const path = new fabric.Path('M 0 0 L 50 0 M 50 0 L 40 -10 M 50 0 L 40 10', {
+      left: 100,
+      top: 100,
+      stroke: '#ff0000',
+      strokeWidth: 4,
+      fill: 'transparent',
+      strokeLineCap: 'round',
+      strokeLineJoin: 'round',
+      scaleX: 2,
+      scaleY: 2,
+    });
+    
+    fabricCanvasRef.current.add(path);
+    fabricCanvasRef.current.setActiveObject(path);
+  };
+
+  const addText = () => {
+    if (!fabricCanvasRef.current) return;
+    const text = new fabric.IText('Double click to edit', {
+      left: 100,
+      top: 150,
+      fontFamily: 'Outfit',
+      fontSize: 24,
+      fill: '#ff0000',
+    });
+    fabricCanvasRef.current.add(text);
+    fabricCanvasRef.current.setActiveObject(text);
+  };
+
+  const addRedact = () => {
+    if (!fabricCanvasRef.current) return;
+    const rect = new fabric.Rect({
+      left: 150,
+      top: 150,
+      fill: '#000000',
+      width: 150,
+      height: 50,
+      cornerColor: 'white',
+      cornerStrokeColor: '#000000',
+      transparentCorners: false,
+      cornerStyle: 'circle',
+    });
+    fabricCanvasRef.current.add(rect);
+    fabricCanvasRef.current.setActiveObject(rect);
+  };
+
+  const addBlur = () => {
+    if (!fabricCanvasRef.current) return;
+    // Using a semi-transparent grey with a border to represent blur
+    // In a real implementation we might use a pattern or filter, 
+    // but for this UI, a "privacy" style box works well.
+    const rect = new fabric.Rect({
+      left: 200,
+      top: 200,
+      fill: 'rgba(150, 150, 150, 0.8)',
+      stroke: 'rgba(255, 255, 255, 0.5)',
+      strokeWidth: 2,
+      width: 150,
+      height: 50,
+      cornerColor: 'white',
+      cornerStrokeColor: '#999',
+      transparentCorners: false,
+      cornerStyle: 'circle',
+    });
+    fabricCanvasRef.current.add(rect);
+    fabricCanvasRef.current.setActiveObject(rect);
+  };
+
+  const deleteSelected = () => {
+    if (!fabricCanvasRef.current) return;
+    const activeObjects = fabricCanvasRef.current.getActiveObjects();
+    fabricCanvasRef.current.remove(...activeObjects);
+    fabricCanvasRef.current.discardActiveObject();
+    fabricCanvasRef.current.renderAll();
+  };
+
+  const saveAnnotations = async () => {
+    if (!fabricCanvasRef.current || !imgRef.current) return;
+
+    // To save, we need to create a temporary canvas that combines the original image and annotations
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const image = imgRef.current;
+    
+    // Set size to actual image dimensions
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+
+    // 1. Draw original image
+    ctx.drawImage(image, 0, 0);
+
+    // 2. Draw annotations (scaled)
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
+    
+    // We can use fabric's internal scaling or just get the objects and draw them
+    // Simpler way: fabric.Canvas.toDataURL with multiplier
+    const dataUrl = fabricCanvasRef.current.toDataURL({
+      format: 'png',
+      multiplier: scaleX, // Assuming scaleX and scaleY are same, which they should be for aspect ratio
+    });
+
+    const annotationImage = new Image();
+    annotationImage.src = dataUrl;
+    await new Promise(resolve => annotationImage.onload = resolve);
+    
+    ctx.drawImage(annotationImage, 0, 0);
+
+    const finalImage = canvas.toDataURL('image/png');
+    setScreenshot(finalImage);
+    setIsAnnotating(false);
+    
+    // Add to history
+    setHistory(prev => {
+      const newItem = {
+        id: Date.now(),
+        url: url,
+        screenshot: finalImage,
+        pageInfo: pageInfo,
+        resolution: { ...resolution, label: 'Annotated' },
+        timestamp: new Date().toLocaleTimeString()
+      };
+      return [newItem, ...prev].slice(0, 5);
+    });
+  };
+
   return (
     <div className="app">
       <div className="gradient-bg"></div>
@@ -954,6 +1136,40 @@ function App() {
                     </button>
                   </div>
                 </div>
+              ) : isAnnotating ? (
+                <div className="annotation-container">
+                  <img ref={imgRef} src={screenshot} alt="Screenshot to annotate" className="annotation-img" />
+                  <div className="canvas-wrapper">
+                    <canvas ref={canvasRef} />
+                  </div>
+                  <div className="annotation-controls">
+                    <button onClick={addRect} className="action-btn" title="Add Rectangle">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                    </button>
+                    <button onClick={addArrow} className="action-btn" title="Add Arrow">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                    </button>
+                    <button onClick={addText} className="action-btn" title="Add Text">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+                    </button>
+                    <button onClick={addRedact} className="action-btn" title="Redact (Solid Box)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                    </button>
+                    <button onClick={addBlur} className="action-btn" title="Blur (Privacy Box)">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"></path></svg>
+                    </button>
+                    <button onClick={deleteSelected} className="action-btn delete" title="Delete Selected">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                    </button>
+                    <div className="divider-v"></div>
+                    <button onClick={saveAnnotations} className="action-btn download" title="Apply Annotations">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                    </button>
+                    <button onClick={() => setIsAnnotating(false)} className="action-btn" title="Cancel">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   <img src={screenshot} alt="Screenshot preview" />
@@ -970,6 +1186,9 @@ function App() {
                       <path d="M6 2v14a2 2 0 0 0 2 2h14" />
                       <path d="M18 22V8a2 2 0 0 0-2-2H2" />
                     </svg>
+                  </button>
+                  <button onClick={() => setIsAnnotating(true)} className="action-btn copy" title="Annotate Image">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                   </button>
                     <button onClick={copyToClipboard} className="action-btn copy" title={copied ? 'Copied!' : 'Copy to Clipboard'}>
                       {copied ? (
