@@ -8,25 +8,30 @@ Screenshotter is a full-stack application designed to capture precise, high-qual
 
 1. **Smart Scrolling**: Robust handling of deep links (URL hashes), ensuring the screenshot captures the intended section even on complex SPAs or sites with broken native scrolling.
 2. **Popup Removal**: Aggressive blocking and removal of cookie banners, consent dialogs, and newsletter popups.
-3. **Annotation Layer**: Built-in editing tools (Text, Arrows, Boxes, Blur) using Fabric.js for high-fidelity markups.
-4. **Client-Side Cropping**: Full-resolution cropping without server round-trips.
+3. **Client-Side Cropping**: Full-resolution cropping without server round-trips.
+4. **Annotation Layer**: Fabric.js-powered drawing tools for arrows, boxes, text, and blur regions.
+5. **Screenshot Queueing**: Queue multiple captures while one is processing.
 
 ## Architecture
 
 ### Frontend (`src/`)
 - **Framework**: React 19 + Vite 7
+- **Canvas Library**: Fabric.js 6.x for annotations
 - **Key Component**: `App.jsx` handles all UI, state management, and API calls
 - **Styling**: `App.css` uses CSS variables for theming (light/dark mode)
 - **State Persistence**: Uses `localStorage` for:
-  - Theme preference (`screenshotter-theme`)
+  - Theme preference (`theme`)
+  - Screenshot mode (`screenshotMode`)
   - Recent URLs (`recentUrls`)
   - Screenshot history (`screenshotter-history`)
   - Custom resolutions (`screenshotter-custom-resolutions`)
+  - Admin key (`screenshotter-admin-key`)
 
 ### Backend (`server/`)
 - **Framework**: Express 5
 - **Core Engine**: Puppeteer with @sparticuz/chromium (production) or regular Puppeteer (development)
-- **Memory Optimization**: Uses a persistent browser instance with specific flags (`--disable-dev-shm-usage`, etc.) to stay within Render's free tier limits.
+- **Rate Limiting**: express-rate-limit (in-memory) with admin bypass
+- **Memory Optimization**: Persistent browser instance with page cleanup
 
 ### API Endpoints
 | Endpoint | Method | Description |
@@ -36,15 +41,31 @@ Screenshotter is a full-stack application designed to capture precise, high-qual
 
 ## Key Logic & Heuristics
 
+### Screenshot Queueing (`App.jsx`)
+- `queue` state holds pending screenshot requests
+- When `loading` is true, new requests are added to queue
+- `useEffect` monitors `loading` and `queue` to process next item
+- Status bar shows current capture + queued URLs
+
+### Admin Mode (`server/index.js`)
+- `ADMIN_KEY` environment variable sets the secret
+- `isAdminRequest(req)` checks `x-admin-key` header
+- Rate limiters use `skip: isAdminRequest` to bypass limits
+- Frontend stores key in localStorage, includes in headers
+
+### Annotation Layer (`App.jsx`)
+- Uses Fabric.js Canvas for object manipulation
+- `uniformScaling: false` allows non-proportional resizing
+- `strokeUniform: true` keeps consistent stroke width
+- Blur regions use `fabric.Pattern` for live preview
+- Final blur applied via canvas context `filter` property
+
 ### Smart Scrolling (`server/index.js`)
 Multi-step strategy to locate target content:
 
 1. **Native Hash Navigation**: `window.location.hash = hash`
 2. **Selector Fallback**: Tries `#id`, `[id="id"]`, `[name="id"]`, `[data-section="id"]`, etc.
-3. **Text Search**: Decodes hash (e.g., `#cost-to-run` → "cost to run") and searches:
-   - Headings (`h1`-`h6`) containing the text
-   - Elements with partial ID matches
-   - Text nodes with keywords
+3. **Text Search**: Decodes hash (e.g., `#cost-to-run` → "cost to run") and searches headings and text nodes
 
 ### Popup Removal (`server/index.js`)
 Three-layer defense:
@@ -53,24 +74,42 @@ Three-layer defense:
 2. **Cookie Pre-setting**: Sets consent cookies for Iubenda, OneTrust, CookieYes, etc.
 3. **DOM Cleanup**: Removes fixed/sticky elements, modals, `[role="alertdialog"]`
 
-### Annotation Layer (`src/App.jsx`)
-Powered by Fabric.js for object-oriented canvas manipulation:
-- **Pure Blur Logic**: Uses a two-pass approach. First, a frosted-glass preview pattern is used for real-time editing. During the final save, a real Gaussian blur filter is applied to the original image context within the clipped regions defined by the blur boxes.
-- **Non-Proportional Scaling**: Enabled via `uniformScaling: false` on the Fabric canvas.
-- **Persistence**: Annotated images are saved back to history as new base64 strings.
+### Rate Limiting
+```javascript
+const LIMITS = {
+  MAX_REQUESTS_PER_MINUTE: 5,
+  MAX_REQUESTS_PER_HOUR: 30,
+  MAX_URLS_PER_BATCH: 5,
+  MAX_WIDTH: 3840,
+  MAX_HEIGHT: 2160,
+};
+```
 
 ## UI/UX Standards
 
 ### Button Design
 All interactive buttons follow icon-only design:
 - **Shape**: Rounded square (`border-radius: 14px`)
-- **Size**: 54px × 54px for primary actions, 32px for top navigation
+- **Size**: 54px × 54px for primary actions
 - **Content**: Simple SVG icon, no text labels
-- **Tooltips**: Use `data-tooltip` attribute for instant CSS tooltips (no JS delay)
+- **Tooltips**: Use `title` attribute
 
-### Layout & Navigation
-- **Fixed Top Bar**: Ensures navigation is always accessible and doesn't overlap the capture preview.
-- **Animated Logo**: Uses SVG filters (glow) and CSS keyframes (scanline, pulse) for a "capture" aesthetic.
+### Capture Status
+- Shows current URL being captured
+- Displays queued URLs with accent color
+- Animated spinner for loading state
+- Queue badge on capture button
+
+### Admin Badge
+- Green accent with shield icon
+- Appears when admin key is set
+- Pulses slowly for visibility
+- Tooltip explains keyboard shortcut
+
+### Annotation Controls
+- Horizontal toolbar below screenshot
+- Tools: Rectangle, Arrow, Text, Blur, Delete
+- Blur slider appears when blur region selected
 
 ## Development
 
@@ -81,12 +120,11 @@ npm run build    # Build frontend to dist/
 npm start        # Start production server
 ```
 
-### Environment Detection
-```javascript
-const isProduction = process.env.NODE_ENV === 'production';
+### Environment Variables
+```bash
+NODE_ENV=production  # Use @sparticuz/chromium
+ADMIN_KEY=secret     # Admin key for rate limit bypass
 ```
-- Production: Uses @sparticuz/chromium
-- Development: Uses regular Puppeteer
 
 ## Deployment (Render)
 
@@ -100,19 +138,18 @@ services:
     startCommand: npm start
 ```
 
-### Key Points
-- Auto-deploy enabled from `main` branch
-- Static files served from `dist/`
-- Express 5 requires `/{*splat}` for catch-all routes (not `*`)
+### Environment Variables on Render
+- `NODE_ENV`: `production`
+- `ADMIN_KEY`: Your secret admin key
 
 ## File Structure
 ```
 ├── src/
-│   ├── App.jsx           # Main React component (~1400 lines)
-│   ├── App.css           # All styling (~1550 lines)
+│   ├── App.jsx           # Main React component
+│   ├── App.css           # All styling
 │   └── main.jsx          # React entry point
 ├── server/
-│   └── index.js          # Express server + Puppeteer (~600 lines)
+│   └── index.js          # Express server + Puppeteer
 ├── render.yaml           # Render deployment config
 ├── package.json          # Dependencies and scripts
 ├── agents.md             # This file
@@ -125,8 +162,20 @@ services:
 ### "Chrome not found" on Render
 - Solution: Use `@sparticuz/chromium` with `puppeteer-core` in production
 
-### Render Memory Limits (Free Tier)
-- Solution: Use a persistent browser instance instead of launching a new one per request. Ensure `page.close()` is called in a `finally` block or via timeout.
+### Express 5 catch-all route error
+- Wrong: `app.get('*', ...)`
+- Right: `app.get('/{*splat}', ...)`
 
-### Fabric.js Scaling Aspect Ratio
-- Solution: Set `uniformScaling: false` on the `fabric.Canvas` instance to allow stretching boxes.
+### Fabric.js non-proportional scaling
+- Set `uniformScaling: false` on Canvas
+- Set `lockUniScaling: false` on objects
+
+### Blur regions not selectable
+- Add `selectable: true`, `evented: true`
+- Add `backgroundColor: 'rgba(255,255,255,0.01)'` for hit detection
+
+### Stroke width changes on resize
+- Add `strokeUniform: true` to shapes
+
+### Queue not working with keyboard shortcut
+- Remove `!loading` check from Ctrl+Enter handler

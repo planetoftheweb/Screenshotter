@@ -21,27 +21,39 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 - **DOM Cleanup**: Removes fixed overlays and modals before capture
 
 ### ✂️ Post-Capture Tools
-- **Annotation Layer**: Add rectangles, arrows, and text to highlight important areas
-- **Pure Blur Tool**: Obscure sensitive information with a controllable, natural-looking blur (no gray tint)
 - **Client-Side Cropping**: Crop any screenshot to focus on a specific area at full resolution
+- **Annotation Layer**: Add arrows, boxes, and text using Fabric.js canvas
+- **Pure Blur Tool**: Blur sensitive information with adjustable strength
 - **Download Options**: Download individual screenshots or batch download all as ZIP
 - **Copy to Clipboard**: One-click copy for easy sharing
 - **URL Retention**: Copy the original URL back for reference
 
+### ⚡ Screenshot Queueing
+- **Queue While Processing**: Submit new URLs while a capture is in progress
+- **Visual Status**: See current capture and queued URLs in real-time
+- **Queue Badge**: Button shows count of pending screenshots
+- **Keyboard Shortcuts**: Ctrl/Cmd+Enter works even during loading
+
 ### 💾 Persistence
-- **Screenshot History**: Last 10 captures saved in local storage (including annotated versions)
+- **Screenshot History**: Last 10 captures saved in local storage
 - **Custom Resolutions**: Your custom sizes are remembered
 - **Theme Preference**: Light/dark mode preference persists
 - **Screenshot Mode**: Color scheme preference (light/dark/system) is saved
 - **Recent URLs**: Quick access to previously captured URLs
+- **Admin Key**: Rate limit bypass key persists
 
 ### 🎨 Modern UI
-- **Fixed Top Navigation**: Improved layout that works perfectly on all screen sizes
-- **Interactive Logo**: Vibrant animated logo with capture artifacts
 - **Light/Dark Mode**: Toggle between themes
 - **Instant Tooltips**: Hover over any button for instant help
 - **Responsive Design**: Works on desktop and mobile
-- **Keyboard Shortcuts**: ⌘/Ctrl + Enter to capture
+- **Keyboard Shortcuts**: 
+  - ⌘/Ctrl + Enter: Capture screenshot (or add to queue)
+  - Ctrl + Shift + A: Set admin key
+
+### 🔐 Admin Mode
+- **Rate Limit Bypass**: Admins can bypass all rate limits
+- **Visual Indicator**: Green "ADMIN" badge when active
+- **Environment Variable**: Set `ADMIN_KEY` on server
 
 ## Tech Stack
 
@@ -50,7 +62,7 @@ A powerful web-based tool for capturing professional screenshots of websites. Bu
 | Frontend | React 19, Vite 7 |
 | Backend | Node.js, Express 5 |
 | Automation | Puppeteer, @sparticuz/chromium |
-| Libraries | Fabric.js, react-image-crop, jszip, express-rate-limit |
+| Libraries | react-image-crop, Fabric.js, jszip, express-rate-limit |
 | Deployment | Render |
 
 ## Installation
@@ -77,14 +89,6 @@ npm run dev
 2. Select a resolution from the dropdown
 3. (Optional) Toggle screenshot color scheme mode (system/light/dark)
 4. Press ⌘/Ctrl + Enter or click the capture button
-
-### Annotations & Blurring
-1. After capturing, click the **Pencil icon** (Annotate) on the screenshot preview
-2. Choose a tool:
-   - **Rectangle/Arrow/Text**: Draw directly on the image
-   - **Blur**: Add a blur area. Use the **Blur slider** to adjust intensity
-3. Drag corners to resize (free-form resizing supported)
-4. Click the **Checkmark** (Apply) to merge your changes or **X** to cancel
 
 ### Screenshot Color Scheme
 Click the screenshot mode button in the top-right navigation to cycle through:
@@ -114,6 +118,22 @@ example.com/#features
 2. Click the crop button
 3. Drag to select the area you want
 4. Click confirm to save the cropped version
+
+### Annotations & Blurring
+1. Capture a screenshot
+2. Click the annotate button
+3. Use the toolbar to add rectangles, arrows, text, or blur regions
+4. Drag corners to resize (non-proportional)
+5. Click delete to remove selected annotation
+6. Adjust blur strength with slider when blur is selected
+7. Click save to apply annotations
+
+### Screenshot Queue
+1. Start a capture
+2. While loading, enter another URL
+3. Press Ctrl/Cmd+Enter to add to queue
+4. Status bar shows current capture and queued URLs
+5. Captures process automatically in order
 
 ## Project Structure
 
@@ -145,6 +165,7 @@ example.com/#features
 |----------|-------------|---------|
 | `NODE_ENV` | Environment mode | `production` |
 | `PORT` | Server port | `10000` (Render default) |
+| `ADMIN_KEY` | Admin key for rate limit bypass | (none) |
 
 ## Rate Limits
 
