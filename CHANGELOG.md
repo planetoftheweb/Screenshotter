@@ -2,84 +2,71 @@
 
 All notable changes to Screenshotter will be documented in this file.
 
+## [1.2.0] - 2025-12-20
+
+### Added
+- **Screenshot Queueing**: Submit new screenshot requests while one is processing.
+  - URLs are queued and processed automatically in order.
+  - Visual status bar shows current capture and queued URLs.
+  - Queue badge on capture button shows total pending count.
+  - Ctrl/Cmd+Enter now works while loading to add to queue.
+
+- **Admin Mode**: Bypass rate limits for power users.
+  - Set `ADMIN_KEY` environment variable on server.
+  - Press `Ctrl+Shift+A` in the app to enter admin key.
+  - Green "ADMIN" badge appears in header when active.
+  - All rate limits are skipped for admin requests.
+
+- **Capture Status Indicator**: Real-time feedback during captures.
+  - Shows "Capturing [URL]..." with animated spinner.
+  - Displays queued URLs with count.
+  - Purple accent styling for queue information.
+
+- **Annotation Layer**: Add arrows, boxes, and text to screenshots using Fabric.js.
+  - Annotations remain editable and deletable.
+  - Non-proportional resizing (corners resize freely).
+  - Consistent stroke width with `strokeUniform`.
+
+- **Pure Blur Tool**: Blur sensitive information with adjustable strength.
+  - Live preview using pattern-based frosted glass effect.
+  - Blur strength slider (5-30px) when blur region is selected.
+  - Transparent blur (no colored overlay).
+  - Blur regions are fully selectable and editable.
+
+### Changed
+- Keyboard shortcut (Ctrl/Cmd+Enter) now works during loading to queue additional URLs.
+- Enhanced visual feedback with queue badge showing pending count.
+- Refactored layout to fixed top navigation bar.
+- Animated logo with scan effect and capture corners.
+- Memory optimization with persistent browser instance.
+
 ## [1.1.0] - 2025-12-10
 
 ### Added
 - **Zoom Control**: Added a zoom slider (25% - 300%) to control the scale of the captured page.
-  - Improves readability or captures more content.
-  - Uses device scaling for zoom-in (fidelity) and viewport expansion for zoom-out (coverage).
 - **Screenshot Color Scheme Control**: New toggle button to capture screenshots in light mode, dark mode, or system default.
-  - Three modes: System (default), Light, Dark.
-  - Mode preference persists in localStorage.
-  - Uses Puppeteer's `emulateMediaFeatures` and aggressive DOM overrides to enforce the scheme.
-  - Attempts to auto-click site-specific theme toggles.
 
 ### Changed
-- **Screenshot color enforcement**: Server now aggressively forces the requested color scheme (emulated media, meta `color-scheme`, class/data-attribute overrides, mutation observer) and attempts to auto-toggle site theme switches before capturing.
+- **Screenshot color enforcement**: Server now aggressively forces the requested color scheme.
 - **Textarea shortcuts**: URL input now handles Cmd/Ctrl+A for select-all while preserving Cmd/Ctrl+Enter to capture.
-- **Navigation Reliability**: Changed Puppeteer navigation wait condition to `networkidle0` and increased post-load delay to 3s to fix iframe rendering issues (Issue #8).
+- **Navigation Reliability**: Changed Puppeteer navigation wait condition to `networkidle0` and increased post-load delay.
 
 ## [1.0.0] - 2025-12-07
 
 ### 🎉 Initial Release
 
 #### Features
-- **Screenshot Capture**
-  - Multiple preset resolutions (HD, Vertical, Full Page)
-  - Custom user-defined resolutions with persistence
-  - Batch URL processing (up to 5 URLs per request)
-  - Full page screenshot support
-
-- **Smart Scrolling**
-  - URL hashtag navigation (e.g., `#section-name`)
-  - Automatic element detection for broken anchors
-  - Text-based search fallback for missing IDs
-  - SPA-compatible navigation
-
-- **Popup Removal**
-  - Request interception for cookie/consent scripts
-  - Pre-set consent cookies for major providers
-  - DOM cleanup for fixed/sticky overlays
-  - Support for Iubenda, OneTrust, CookieBot, and more
-
-- **Post-Capture Tools**
-  - Client-side cropping with react-image-crop
-  - Download as PNG
-  - Copy to clipboard
-  - Batch download as ZIP (jszip)
-  - URL retention for reference
-
-- **User Interface**
-  - Light/dark mode toggle
-  - Instant CSS tooltips (no delay)
-  - Icon-only button design
-  - Responsive layout
-  - Help overlay tutorial
-
-- **Persistence**
-  - Screenshot history (10 items) in localStorage
-  - Custom resolutions in localStorage
-  - Theme preference in localStorage
-  - Recent URLs in localStorage
-
-- **Rate Limiting**
-  - 5 requests per minute per IP
-  - 30 requests per hour per IP
-  - Max 5 URLs per batch
-  - Max 4K resolution (3840×2160)
-  - IPv6 subnet masking for proper IPv6 rate limiting (fixes ERR_ERL_KEY_GEN_IPV6)
-
-- **Deployment**
-  - Render deployment configuration
-  - @sparticuz/chromium for cloud Puppeteer
-  - Express 5 compatibility
+- **Screenshot Capture**: Multiple preset resolutions, custom sizes, batch processing, full page support
+- **Smart Scrolling**: URL hashtag navigation, automatic element detection, SPA-compatible
+- **Popup Removal**: Request interception, consent cookies, DOM cleanup
+- **Post-Capture Tools**: Client-side cropping, download as PNG, copy to clipboard, batch ZIP download
+- **User Interface**: Light/dark mode, instant tooltips, responsive layout
+- **Persistence**: Screenshot history, custom resolutions, theme preference, recent URLs
+- **Rate Limiting**: 5/min, 30/hour per IP with IPv6 support
+- **Deployment**: Render configuration with @sparticuz/chromium
 
 ### Tech Stack
-- React 19.2
-- Vite 7.2
-- Express 5.2
-- Puppeteer 24.32
-- @sparticuz/chromium 143.0
+- React 19.2, Vite 7.2, Express 5.2, Puppeteer 24.32
 
 ---
 
@@ -92,4 +79,3 @@ All notable changes to Screenshotter will be documented in this file.
 - [ ] Webhook notifications
 - [ ] PDF export option
 - [ ] Screenshot comparison/diff
-

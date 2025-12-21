@@ -10,6 +10,8 @@ function App() {
   const [screenshot, setScreenshot] = useState(null);
   const [pageInfo, setPageInfo] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [queue, setQueue] = useState([]);
+  const [captureStatus, setCaptureStatus] = useState('');
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
@@ -18,6 +20,7 @@ function App() {
     const savedTheme = localStorage.getItem('theme');
     return savedTheme || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
   });
+  const [adminKey, setAdminKey] = useState(() => localStorage.getItem('screenshotter-admin-key') || '');
   const [screenshotMode, setScreenshotMode] = useState(() => {
     const savedMode = localStorage.getItem('screenshotMode');
     return savedMode === 'light' || savedMode === 'dark' ? savedMode : 'light';
@@ -44,6 +47,9 @@ function App() {
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [showResDropdown, setShowResDropdown] = useState(false);
+  const [blurStrength, setBlurStrength] = useState(10);
+  const [hasBlurSelected, setHasBlurSelected] = useState(false);
+  const [blurredBase64, setBlurredBase64] = useState(null);
   const imgRef = useRef(null);
   const downloadRef = useRef(null);
   const textareaRef = useRef(null);
@@ -108,6 +114,27 @@ function App() {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Admin key shortcut (Ctrl+Shift+A)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'A') {
+        e.preventDefault();
+        const key = prompt('Enter admin key (leave empty to remove):');
+        if (key !== null) {
+          if (key.trim()) {
+            localStorage.setItem('screenshotter-admin-key', key.trim());
+            setAdminKey(key.trim());
+          } else {
+            localStorage.removeItem('screenshotter-admin-key');
+            setAdminKey('');
+          }
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('screenshotMode', screenshotMode);
@@ -260,6 +287,13 @@ function App() {
       targets = targets.slice(0, MAX_URLS_PER_BATCH);
     }
 
+    // If already loading, add to queue instead
+    if (loading) {
+      setQueue(prev => [...prev, ...targets.map(t => ({ url: t, resolution: { ...resolution }, screenshotMode }))]);
+      setUrl('');
+      return;
+    }
+
     setLoading(true);
     if (targets.length <= MAX_URLS_PER_BATCH) setError(null);
     setScreenshot(null);
@@ -268,6 +302,8 @@ function App() {
     let successCount = 0;
     
     for (const targetUrlRaw of targets) {
+      // Update status for current URL
+      setCaptureStatus(`Capturing ${targetUrlRaw}...`);
       try {
         // Add protocol if missing
         let targetUrl = targetUrlRaw;
@@ -277,7 +313,10 @@ function App() {
 
         const response = await fetch('/api/screenshot', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 
+            'Content-Type': 'application/json',
+            ...(adminKey && { 'x-admin-key': adminKey })
+          },
           body: JSON.stringify({ 
             url: targetUrl,
             width: resolution.width,
@@ -338,8 +377,87 @@ function App() {
       setError(`Captured ${successCount} of ${targets.length} screenshots.`);
     }
 
+    setCaptureStatus('');
     setLoading(false);
   };
+
+  // Process queued URLs after current batch completes
+  useEffect(() => {
+    if (!loading && queue.length > 0) {
+      const processQueue = async () => {
+        const nextItem = queue[0];
+        setQueue(prev => prev.slice(1));
+        
+        // Process the queued item
+        setLoading(true);
+        setError(null);
+        
+        try {
+          let targetUrl = nextItem.url;
+          if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+            targetUrl = 'https://' + targetUrl;
+          }
+          
+          setCaptureStatus(`Capturing ${targetUrl}...`);
+
+          const response = await fetch('/api/screenshot', {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              ...(adminKey && { 'x-admin-key': adminKey })
+            },
+            body: JSON.stringify({ 
+              url: targetUrl,
+              width: nextItem.resolution.width,
+              height: nextItem.resolution.height,
+              fullPage: nextItem.resolution.fullPage,
+              colorScheme: nextItem.screenshotMode
+            }),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            setScreenshot(data.image);
+            const newPageInfo = { title: data.title, hash: data.hash };
+            setPageInfo(newPageInfo);
+            
+            setHistory(prev => {
+              const newItem = {
+                id: Date.now(),
+                url: targetUrl,
+                screenshot: data.image,
+                pageInfo: newPageInfo,
+                resolution: nextItem.resolution,
+                timestamp: new Date().toLocaleTimeString()
+              };
+              return [newItem, ...prev].slice(0, 10);
+            });
+
+            setRecentUrls(prev => {
+              const newUrls = [targetUrl, ...prev.filter(u => u !== targetUrl)].slice(0, MAX_RECENT_URLS);
+              return newUrls;
+            });
+          } else if (response.status === 429) {
+            const retryAfter = data.retryAfter || 60;
+            setError(`Rate limit reached. Please wait ${retryAfter < 60 ? retryAfter + ' seconds' : Math.ceil(retryAfter / 60) + ' minute(s)'} before trying again.`);
+            // Re-queue the failed item
+            setQueue(prev => [nextItem, ...prev]);
+          } else {
+            setError(`Failed to capture ${targetUrl}: ${data.error}`);
+          }
+        } catch (err) {
+          console.error('Queue processing error:', err);
+          setError('Failed to process queued screenshot.');
+        }
+        
+        setCaptureStatus('');
+        setLoading(false);
+      };
+      
+      processQueue();
+    }
+  }, [loading, queue]);
 
   const downloadScreenshot = (imgData = screenshot, info = pageInfo) => {
     if (!imgData) return;
@@ -549,6 +667,30 @@ function App() {
       width: imgRef.current.clientWidth,
       height: imgRef.current.clientHeight,
       selection: true,
+      uniformScaling: false,
+    });
+
+    // Track blur object selection for slider visibility
+    canvas.on('selection:created', (e) => {
+      const obj = e.selected?.[0];
+      if (obj?.isBlur) {
+        setHasBlurSelected(true);
+        setBlurStrength(obj.blurLevel || 10);
+      } else {
+        setHasBlurSelected(false);
+      }
+    });
+    canvas.on('selection:updated', (e) => {
+      const obj = e.selected?.[0];
+      if (obj?.isBlur) {
+        setHasBlurSelected(true);
+        setBlurStrength(obj.blurLevel || 10);
+      } else {
+        setHasBlurSelected(false);
+      }
+    });
+    canvas.on('selection:cleared', () => {
+      setHasBlurSelected(false);
     });
 
     fabricCanvasRef.current = canvas;
@@ -567,6 +709,40 @@ function App() {
     };
   }, [isAnnotating, initFabric]);
 
+  // Generate blurred version of screenshot for live preview
+  useEffect(() => {
+    if (!screenshot || !isAnnotating) {
+      setBlurredBase64(null);
+      return;
+    }
+    
+    const generateBlurredVersion = async () => {
+      const img = new Image();
+      img.src = screenshot;
+      await new Promise(resolve => img.onload = resolve);
+      
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.filter = `blur(${blurStrength}px)`;
+      ctx.drawImage(img, 0, 0);
+      setBlurredBase64(canvas.toDataURL('image/png'));
+    };
+    
+    generateBlurredVersion();
+  }, [screenshot, isAnnotating, blurStrength]);
+
+  // Update blur strength on selected blur object
+  useEffect(() => {
+    if (!fabricCanvasRef.current || !hasBlurSelected) return;
+    const activeObj = fabricCanvasRef.current.getActiveObject();
+    if (activeObj?.isBlur) {
+      activeObj.blurLevel = blurStrength;
+      fabricCanvasRef.current.renderAll();
+    }
+  }, [blurStrength, hasBlurSelected]);
+
   const addRect = () => {
     if (!fabricCanvasRef.current) return;
     const rect = new fabric.Rect({
@@ -575,6 +751,7 @@ function App() {
       fill: 'transparent',
       stroke: '#ff0000',
       strokeWidth: 4,
+      strokeUniform: true,
       width: 100,
       height: 100,
       cornerColor: 'white',
@@ -595,6 +772,7 @@ function App() {
       top: 100,
       stroke: '#ff0000',
       strokeWidth: 4,
+      strokeUniform: true,
       fill: 'transparent',
       strokeLineCap: 'round',
       strokeLineJoin: 'round',
@@ -637,25 +815,62 @@ function App() {
   };
 
   const addBlur = () => {
-    if (!fabricCanvasRef.current) return;
-    // Using a semi-transparent grey with a border to represent blur
-    // In a real implementation we might use a pattern or filter, 
-    // but for this UI, a "privacy" style box works well.
-    const rect = new fabric.Rect({
-      left: 200,
-      top: 200,
-      fill: 'rgba(150, 150, 150, 0.8)',
-      stroke: 'rgba(255, 255, 255, 0.5)',
-      strokeWidth: 2,
-      width: 150,
-      height: 50,
-      cornerColor: 'white',
-      cornerStrokeColor: '#999',
-      transparentCorners: false,
-      cornerStyle: 'circle',
-    });
-    fabricCanvasRef.current.add(rect);
-    fabricCanvasRef.current.setActiveObject(rect);
+    if (!fabricCanvasRef.current || !blurredBase64) return;
+    
+    // Create blur box with frosted glass effect using blurred image pattern
+    const img = new Image();
+    img.src = blurredBase64;
+    img.onload = () => {
+      const pattern = new fabric.Pattern({
+        source: img,
+        repeat: 'no-repeat',
+      });
+      
+      const rect = new fabric.Rect({
+        left: 100,
+        top: 100,
+        width: 200,
+        height: 80,
+        fill: pattern,
+        stroke: 'rgba(255, 255, 255, 0.5)',
+        strokeWidth: 2,
+        strokeUniform: true,
+        cornerColor: 'white',
+        cornerStrokeColor: '#6366f1',
+        transparentCorners: false,
+        cornerStyle: 'circle',
+        isBlur: true,
+        blurLevel: blurStrength,
+        // Ensure object is selectable
+        selectable: true,
+        evented: true,
+        hasControls: true,
+        hasBorders: true,
+        lockUniScaling: false,
+        objectCaching: false,
+        // Add a very light background for hit detection
+        backgroundColor: 'rgba(255, 255, 255, 0.01)',
+      });
+      
+      // Align pattern with image position
+      const alignPattern = () => {
+        if (rect.fill && rect.fill.offsetX !== undefined) {
+          rect.fill.offsetX = -rect.left;
+          rect.fill.offsetY = -rect.top;
+        }
+      };
+      
+      rect.on('moving', alignPattern);
+      rect.on('scaling', () => {
+        alignPattern();
+      });
+      rect.on('modified', alignPattern);
+      
+      alignPattern();
+      fabricCanvasRef.current.add(rect);
+      fabricCanvasRef.current.setActiveObject(rect);
+      fabricCanvasRef.current.renderAll();
+    };
   };
 
   const deleteSelected = () => {
@@ -669,27 +884,47 @@ function App() {
   const saveAnnotations = async () => {
     if (!fabricCanvasRef.current || !imgRef.current) return;
 
-    // To save, we need to create a temporary canvas that combines the original image and annotations
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     const image = imgRef.current;
     
-    // Set size to actual image dimensions
     canvas.width = image.naturalWidth;
     canvas.height = image.naturalHeight;
+    
+    const scaleX = image.naturalWidth / image.width;
+    const scaleY = image.naturalHeight / image.height;
 
     // 1. Draw original image
     ctx.drawImage(image, 0, 0);
 
-    // 2. Draw annotations (scaled)
-    const scaleX = image.naturalWidth / image.width;
-    const scaleY = image.naturalHeight / image.height;
-    
-    // We can use fabric's internal scaling or just get the objects and draw them
-    // Simpler way: fabric.Canvas.toDataURL with multiplier
+    // 2. Apply blur regions first (before other annotations)
+    const objects = fabricCanvasRef.current.getObjects();
+    for (const obj of objects) {
+      if (obj.isBlur) {
+        const blurAmount = (obj.blurLevel || 10) * scaleX;
+        const x = obj.left * scaleX;
+        const y = obj.top * scaleY;
+        const w = obj.width * obj.scaleX * scaleX;
+        const h = obj.height * obj.scaleY * scaleY;
+        
+        // Save context, clip to blur region, apply blur, draw image
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(x, y, w, h);
+        ctx.clip();
+        ctx.filter = `blur(${blurAmount}px)`;
+        ctx.drawImage(image, 0, 0);
+        ctx.restore();
+        
+        // Hide blur objects so they don't render in annotation overlay
+        obj.visible = false;
+      }
+    }
+
+    // 3. Draw non-blur annotations
     const dataUrl = fabricCanvasRef.current.toDataURL({
       format: 'png',
-      multiplier: scaleX, // Assuming scaleX and scaleY are same, which they should be for aspect ratio
+      multiplier: scaleX,
     });
 
     const annotationImage = new Image();
@@ -697,6 +932,11 @@ function App() {
     await new Promise(resolve => annotationImage.onload = resolve);
     
     ctx.drawImage(annotationImage, 0, 0);
+    
+    // Restore blur object visibility
+    for (const obj of objects) {
+      if (obj.isBlur) obj.visible = true;
+    }
 
     const finalImage = canvas.toDataURL('image/png');
     setScreenshot(finalImage);
@@ -776,6 +1016,12 @@ function App() {
             <button onClick={() => setShowHelp(true)} className="action-btn" title="Help & Tutorial">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
             </button>
+            {adminKey && (
+              <span className="admin-badge" title="Admin Mode Active (Ctrl+Shift+A to toggle)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                ADMIN
+              </span>
+            )}
             <button onClick={toggleTheme} className="theme-toggle action-btn" title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}>
               {theme === 'dark' ? (
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
@@ -940,14 +1186,13 @@ function App() {
                   e.target.select();
                   return;
                 }
-                if (e.key === 'Enter' && isMod && !loading && url.trim()) {
+                if (e.key === 'Enter' && isMod && url.trim()) {
                   e.preventDefault();
                   captureScreenshot(e);
                 }
               }}
               placeholder="Enter URLs • ⌘/Ctrl+Enter to capture"
               className="url-input"
-              disabled={loading}
               rows={1}
             />
           </div>
@@ -1094,17 +1339,35 @@ function App() {
             </button>
           </div>
 
-          <button type="submit" className="capture-btn" disabled={loading || !url.trim()} aria-label="Capture">
+          <button type="submit" className="capture-btn" disabled={!url.trim()} aria-label={loading ? "Add to Queue" : "Capture"}>
             {loading ? (
-              <span className="spinner"></span>
+              queue.length > 0 ? (
+                <span className="queue-badge">{queue.length + 1}</span>
+              ) : (
+                <span className="spinner"></span>
+              )
             ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                 <circle cx="12" cy="13" r="4"></circle>
               </svg>
             )}
           </button>
         </form>
+
+        {(captureStatus || queue.length > 0) && (
+          <div className="capture-status">
+            <span className="status-spinner"></span>
+            <span className="status-text">
+              {captureStatus}
+              {queue.length > 0 && (
+                <span className="queue-info">
+                  {' • '}{queue.length} queued: {queue.map(q => q.url).slice(0, 3).join(', ')}{queue.length > 3 ? '...' : ''}
+                </span>
+              )}
+            </span>
+          </div>
+        )}
 
         {error && (
           <div className="error-message">
@@ -1152,15 +1415,25 @@ function App() {
                     <button onClick={addText} className="action-btn" title="Add Text">
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
                     </button>
-                    <button onClick={addRedact} className="action-btn" title="Redact (Solid Box)">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
-                    </button>
-                    <button onClick={addBlur} className="action-btn" title="Blur (Privacy Box)">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"></path></svg>
+                    <button onClick={addBlur} className="action-btn" title="Add Blur Region">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg>
                     </button>
                     <button onClick={deleteSelected} className="action-btn delete" title="Delete Selected">
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                     </button>
+                    {hasBlurSelected && (
+                      <div className="blur-control">
+                        <span className="control-label">Blur</span>
+                        <input
+                          type="range"
+                          min="2"
+                          max="30"
+                          value={blurStrength}
+                          onChange={(e) => setBlurStrength(parseInt(e.target.value))}
+                          className="blur-slider"
+                        />
+                      </div>
+                    )}
                     <div className="divider-v"></div>
                     <button onClick={saveAnnotations} className="action-btn download" title="Apply Annotations">
                       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>

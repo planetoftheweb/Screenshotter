@@ -86,6 +86,16 @@ const LIMITS = {
   REQUEST_TIMEOUT_MS: 30000,       // 30 seconds
 };
 
+// Admin key for bypassing rate limits (set via ADMIN_KEY environment variable)
+const ADMIN_KEY = process.env.ADMIN_KEY || null;
+
+// Check if request has valid admin key
+const isAdminRequest = (req) => {
+  if (!ADMIN_KEY) return false;
+  const headerKey = req.headers['x-admin-key'];
+  return headerKey === ADMIN_KEY;
+};
+
 // Helper: Get client key with IPv6 subnet masking and fallbacks
 const getClientKey = (req) => {
   const ip = req.ip || req.headers['x-forwarded-for']?.split(',')[0]?.trim();
@@ -106,6 +116,7 @@ const minuteRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: getClientKey,
+  skip: isAdminRequest, // Skip rate limiting for admin users
 });
 
 // Rate limiter: 30 requests per hour per IP
@@ -119,6 +130,7 @@ const hourlyRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: getClientKey,
+  skip: isAdminRequest, // Skip rate limiting for admin users
 });
 
 app.use(cors());
